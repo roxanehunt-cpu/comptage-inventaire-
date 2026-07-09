@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comptage Inventaire</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --orange: #FF7900;
+    --orange-text: #F16E00;
+    --black: #000000;
+    --white: #FFFFFF;
+    --gris-fonce: #595959;
+    --gris: #8F8F8F;
+    --gris-clair: #D6D6D6;
+    --paper: #FAFAFA;
+    --ok: #0A6E31;
+    --ok-bg: #B8EBD6;
+    --warn: #F16E00;
+    --warn-bg: #FFF6B6;
+    --danger: #CD3C14;
+    --danger-bg: #FFE1D9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: 'Segoe UI', Calibri, Roboto, Arial, sans-serif;
+    background: var(--paper);
+    color: var(--black);
+    padding: 16px;
+  }
+  .wrap{max-width:1240px;margin:0 auto;}
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px; flex-wrap:wrap; gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .mark{
+    width:42px;height:42px;border-radius:10px;background:var(--orange);
+    display:flex;align-items:center;justify-content:center; flex-shrink:0;
+  }
+  .brand .mark svg{width:24px;height:24px;}
+  .brand h1{font-size:19px; margin:0; letter-spacing:-0.01em; color:var(--black);}
+  .brand p{margin:0; font-size:12.5px; color:var(--gris-fonce);}
+
+  .actions{display:flex; gap:8px; flex-wrap:wrap;}
+  button{
+    font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+    border-radius:8px; padding:9px 14px; border:1px solid transparent;
+    transition: all .12s ease;
+  }
+  .btn-primary{background:var(--orange); color:#fff;}
+  .btn-primary:hover{background:var(--orange-text);}
+  .btn-ghost{background:#fff; color:var(--black); border-color:var(--gris-clair);}
+  .btn-ghost:hover{border-color:var(--orange);}
+  .btn-sm{padding:6px 10px; font-size:12.5px; border-radius:7px;}
+
+  .share-banner{
+    background:#FFF6B6; border:1px solid #FFD200; border-radius:10px; padding:10px 14px;
+    font-size:12.5px; color:#595959; margin-bottom:16px; display:flex; align-items:center; gap:8px;
+  }
+  .share-banner b{color:var(--black);}
+
+  .session-bar{
+    background:#fff; border:1px solid var(--gris-clair); border-radius:12px; padding:14px 16px;
+    margin-bottom:16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  .session-bar label{font-size:11px; color:var(--gris-fonce); font-weight:700; text-transform:uppercase; letter-spacing:.03em; display:block; margin-bottom:4px;}
+  .session-bar input[type="date"]{
+    padding:8px 10px; border:1px solid var(--gris-clair); border-radius:7px; font-size:13.5px; font-family:inherit;
+  }
+  .session-bar .session-info{font-size:12.5px; color:var(--gris-fonce);}
+  .toggle-all{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--gris-fonce); cursor:pointer; margin-left:auto;}
+
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;}
+  .stat{background:#fff; border:1px solid var(--gris-clair); border-radius:10px; padding:12px 14px;}
+  .stat .n{font-size:22px; font-weight:700; font-variant-numeric: tabular-nums;}
+  .stat .l{font-size:11.5px; color:var(--gris-fonce); text-transform:uppercase; letter-spacing:.04em; margin-top:2px;}
+  .stat.ok .n{color:var(--ok);}
+  .stat.warn .n{color:#B45309;}
+  .stat.total .n{color:var(--orange-text);}
+
+  .card{background:#fff; border:1px solid var(--gris-clair); border-radius:12px; margin-bottom:16px; overflow:visible;}
+  .card h2{font-size:13.5px; margin:0; padding:12px 16px; border-bottom:1px solid var(--gris-clair); background:#FAFAFA; font-weight:700; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+  .card h2 .chip{
+    font-size:11px; font-weight:700; color:var(--orange-text); background:#FFF3E8;
+    padding:3px 9px; border-radius:100px; text-transform:none; letter-spacing:0;
+  }
+
+  .form-grid{
+    display:grid; grid-template-columns: 1fr 2fr 1.3fr 0.8fr 0.8fr auto; gap:10px;
+    padding:16px; align-items:end; position:relative;
+  }
+  .field{position:relative;}
+  .field label{display:block; font-size:11px; color:var(--gris-fonce); margin-bottom:4px; font-weight:600;}
+  .field input, .field select{
+    width:100%; padding:8px 10px; border:1px solid var(--gris-clair); border-radius:7px;
+    font-size:13.5px; font-family:inherit; background:#fff;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--orange);}
+
+  .combo-drop{
+    position:absolute; top:100%; left:0; right:0; margin-top:4px; background:#fff;
+    border:1px solid var(--gris-clair); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.08);
+    max-height:260px; overflow-y:auto; z-index:50; display:none;
+  }
+  .combo-drop.open{display:block;}
+  .combo-item{padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #F3F1EC;}
+  .combo-item:last-child{border-bottom:none;}
+  .combo-item:hover, .combo-item.active{background:#FFF3E8;}
+  .combo-item .code{font-weight:700; color:var(--orange-text); margin-right:6px; font-variant-numeric: tabular-nums;}
+  .combo-item .desc{color:var(--black);}
+  .combo-empty{padding:10px 12px; font-size:12.5px; color:var(--gris-fonce);}
+  .selected-tag{
+    margin-top:6px; font-size:12px; color:var(--ok); font-weight:600; display:none;
+  }
+  .selected-tag.show{display:block;}
+
+  .calc-preview{font-size:11px; margin-top:4px; min-height:14px; font-weight:600;}
+  .calc-preview.valid{color:var(--ok);}
+  .calc-preview.invalid{color:var(--danger);}
+
+  .cell-wrap{display:flex; flex-direction:column; gap:2px; align-items:center;}
+  .cell-calc{font-size:10px; color:var(--gris-fonce); text-align:center;}
+  .cell-calc.invalid{color:var(--danger); font-weight:700;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    text-align:left; padding:10px 12px; background:#FAFAFA; border-bottom:1px solid var(--gris-clair);
+    font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--gris-fonce); white-space:nowrap;
+  }
+  tbody td{padding:9px 12px; border-bottom:1px solid #F0F0F0; vertical-align:middle;}
+  tbody tr:hover{background:#FCFBF9;}
+  .grp-row td{
+    background:#FFF3E8; font-weight:700; font-size:12px; color:var(--orange-text);
+    padding:7px 12px; border-bottom:1px solid #F3DFC8;
+  }
+  input.cell{
+    width:60px; padding:6px 7px; border:1px solid var(--gris-clair); border-radius:6px;
+    font-size:13px; text-align:center; font-variant-numeric: tabular-nums;
+  }
+  input.cell:focus{outline:none; border-color:var(--orange);}
+  input.cell.wide{width:110px; text-align:left;}
+  input.cell.wide:hover, input.cell.wide:focus{border-color:var(--gris-clair);}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:100px;
+    font-size:11px; font-weight:700; white-space:nowrap;
+  }
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:#8A5A00;}
+  .badge.danger{background:var(--danger-bg); color:var(--danger);}
+
+  .total-cell{font-weight:700; font-variant-numeric: tabular-nums; text-align:center;}
+  .row-danger{background:var(--danger-bg) !important;}
+
+  .icon-btn{
+    border:none; background:transparent; color:var(--gris-fonce); cursor:pointer; font-size:15px;
+    padding:4px 6px; border-radius:6px;
+  }
+  .icon-btn:hover{background:var(--danger-bg); color:var(--danger);}
+
+  .empty{padding:40px; text-align:center; color:var(--gris-fonce); font-size:13.5px;}
+  .footer-note{font-size:11.5px; color:var(--gris-fonce); padding:10px 16px; border-top:1px solid var(--gris-clair); background:#FAFAFA;}
+
+  .archive-list{padding:6px 0;}
+  .archive-row{
+    display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #F0F0F0;
+    flex-wrap:wrap;
+  }
+  .archive-row:last-child{border-bottom:none;}
+  .archive-date{font-weight:700; font-size:13.5px; min-width:110px;}
+  .archive-meta{font-size:12px; color:var(--gris-fonce); flex:1; min-width:160px;}
+  .archive-actions{display:flex; gap:6px;}
+  .archive-row.active{background:#FFF3E8;}
+
+  @media (max-width:900px){
+    .form-grid{grid-template-columns:1fr 1fr;}
+    .stats{grid-template-columns:1fr 1fr;}
+    .toggle-all{margin-left:0;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 8L12 3L21 8V17L12 22L3 17V8Z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M3 8L12 13L21 8" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M12 13V22" stroke="#fff" stroke-width="1.6"/>
+          <path d="M7.5 5.5L16.5 10.5" stroke="#fff" stroke-width="1.4"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Comptage Inventaire</h1>
+        <p>Saisie du dénombrement &middot; comparaison de comptages &middot; export Excel</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-ghost" id="btnClearSession">Vider cette date</button>
+      <button class="btn-primary" id="btnExport">Exporter cette date</button>
+    </div>
+  </header>
+
+  <div class="session-bar">
+    <div>
+      <label>Date d'inventaire active</label>
+      <input type="date" id="sessionDate">
+    </div>
+    <div class="session-info" id="sessionInfo"></div>
+    <label class="toggle-all">
+      <input type="checkbox" id="toggleAllDates">
+      Voir toutes les dates dans le tableau
+    </label>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="statArticles">0</div><div class="l">Lignes saisies</div></div>
+    <div class="stat ok"><div class="n" id="statOk">0</div><div class="l">Comptages conformes</div></div>
+    <div class="stat warn"><div class="n" id="statEcart">0</div><div class="l">Écarts à résoudre</div></div>
+    <div class="stat total"><div class="n" id="statTotal">0</div><div class="l">Quantité totale validée</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Ajouter un comptage <span class="chip" id="masterCount"></span></h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Entrepôt</label>
+        <input id="inEntrepot" list="entrepotList" placeholder="ex: SANTE">
+        <datalist id="entrepotList"></datalist>
+      </div>
+      <div class="field">
+        <label>Article — code ou désignation</label>
+        <input id="inArticle" placeholder="Tapez un code ou un nom d'article..." autocomplete="off">
+        <div class="combo-drop" id="comboDrop"></div>
+        <div class="selected-tag" id="selectedTag"></div>
+      </div>
+      <div class="field">
+        <label>Emplacement</label>
+        <input id="inEmplacement" placeholder="ex: Zone A - Rack 3">
+      </div>
+      <div class="field">
+        <label>Compteur 1</label>
+        <input id="inC1" type="text" inputmode="decimal" placeholder="ex: 3*3*4*6">
+        <div class="calc-preview" id="previewC1"></div>
+      </div>
+      <div class="field">
+        <label>Compteur 2</label>
+        <input id="inC2" type="text" inputmode="decimal" placeholder="ex: 4055+8177+18830">
+        <div class="calc-preview" id="previewC2"></div>
+      </div>
+      <div class="field">
+        <button class="btn-primary" id="btnAdd" style="width:100%;">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Détail du comptage</h2>
+    <div id="tableHost"></div>
+    <div class="footer-note">Les compteurs acceptent des calculs directs : "3*3*4*6" pour un rangement en piles/rangées, ou "4055+8177+18830" pour additionner plusieurs sous-totaux — le résultat s'affiche automatiquement sous la case. L'article reste sélectionné après l'ajout : renseignez juste un nouvel emplacement et les compteurs pour enchaîner les comptages du même article. Quand Compteur 1 et Compteur 2 diffèrent, une colonne d'arbitrage (Compteur 3) apparaît sur la ligne pour trancher.</div>
+  </div>
+
+  <div class="card">
+    <h2>Archive des inventaires</h2>
+    <div class="archive-list" id="archiveList"></div>
+    <div class="footer-note">Chaque date d'inventaire forme un dossier séparé. Cliquez sur "Charger" pour continuer la saisie d'une date passée, ou "Exporter" pour extraire uniquement les données de cette date.</div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, update as fbUpdate, remove as fbRemove, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAvJrFxUGZ58HGm17MSuEVo4Pj7fdHDtKo",
+  authDomain: "comptage-inventaire-orangeci.firebaseapp.com",
+  databaseURL: "https://comptage-inventaire-orangeci-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "comptage-inventaire-orangeci",
+  storageBucket: "comptage-inventaire-orangeci.firebasestorage.app",
+  messagingSenderId: "1060744427565",
+  appId: "1:1060744427565:web:3d8282fe8182d2fa2a60a4"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+const rowsRef = ref(db, 'rows');
+
+const MASTER_ARTICLES = [{"code": "100 080 1", "designation": "Trappe fonte L6T"}, {"code": "100 198 3", "designation": "Poteau acier galva 7m"}, {"code": "100 590 5", "designation": "Embase cheville de 8"}, {"code": "100 831 9", "designation": "Bouchon polyéthyl pr tuy 42/45"}, {"code": "100 859 3", "designation": "Poteau type LEGROS H 0.99 m"}, {"code": "101 102 9", "designation": "Equerre mobile PM L 120mm"}, {"code": "101 184 5", "designation": "Console à flasque L35cm 2,4kgs"}, {"code": "101 558 4", "designation": "Tuyau PVC 6m, D 42/45 (45x1,5)"}, {"code": "102 231 5", "designation": "Echelle 6 échelons 1.25m"}, {"code": "103 189 8", "designation": "Poteau acier galva 8m pyra"}, {"code": "103 463 9", "designation": "Boucle feuillard inox 20x0,7mm"}, {"code": "104 325 9", "designation": "Colle pour tuyau PVC (bt 1kg)"}, {"code": "104 527 7", "designation": "Tuyau PVC 6m, D 75/80 (80x2.5)"}, {"code": "104 558 1", "designation": "Attache plastique N°4 gris"}, {"code": "104 817 9", "designation": "Attache plastique N°5 ivoire"}, {"code": "104 934 3", "designation": "Clavette 5/37"}, {"code": "104 953 4", "designation": "Trappe fonte L3T"}, {"code": "104 958 9", "designation": "Peigne double 5 tuyaux D45mm"}, {"code": "105 104 9", "designation": "Coude PVC D42/45mm 90° R210mm"}, {"code": "105 322 7", "designation": "Manchon réparation D50 pr PEHD"}, {"code": "105 771 4", "designation": "Manchon PVC pour tuyau D 45"}, {"code": "105 971 7", "designation": "Bouchon polyét pr tuy 75-77/80"}, {"code": "105 981 6", "designation": "Console à flasque L 45cm 2,8kg"}, {"code": "105 540 5", "designation": "Poteau béton armé 12/400"}, {"code": "103 638 1", "designation": "Poteau béton armé 9/200"}, {"code": "106 082 9", "designation": "Pince Arobase"}, {"code": "106 751 4", "designation": "Tuyau PVC 6m 32x1,5"}, {"code": "106 754 5", "designation": "Trappe fonte L2T"}, {"code": "107 054 5", "designation": "Trappe fonte K2C"}, {"code": "107 163 4", "designation": "Attache plastique N°4 ivoire"}, {"code": "107 211 2", "designation": "Tuyau PVC 6m, D 77/80 (80x1,5)"}, {"code": "107 345 4", "designation": "Grillage avertiss plast vert"}, {"code": "107 720 9", "designation": "Poteau type LEGROS H 1.75m"}, {"code": "107 942 5", "designation": "Peigne double 5 tuyaux D80mm"}, {"code": "108 203 6", "designation": "Trappe fonte L5T"}, {"code": "108 239 5", "designation": "Peigne simple 5 tuyaux D80mm"}, {"code": "108 583 9", "designation": "Trappe fonte L1T"}, {"code": "108 996 7", "designation": "Coude PVC D75/80mm 90° R360mm"}, {"code": "109 295 0", "designation": "Equerre mobile GM L 240mm"}, {"code": "109 492 3", "designation": "Collier RISLAN 9/62"}, {"code": "109 705 4", "designation": "Trappe fonte M2T"}, {"code": "109 849 5", "designation": "Feuillard inox 20x0,7 (rl 50m)"}, {"code": "109 753 5", "designation": "Dispositif de suspension fibre optique Ø5-8mm"}, {"code": "109 679 8", "designation": "Trappe béton L3T"}, {"code": "100 109 9", "designation": "Trappe béton L5T"}, {"code": "108 526 6", "designation": "Poteau béton armé 10/400"}, {"code": "109 164 9", "designation": "Semelle console univeselle"}, {"code": "102 920 8", "designation": "Poteau Octogonal béton 8m"}, {"code": "104 899 5", "designation": "Tuyau PVC 6m 33x1,5"}, {"code": "100 908 8", "designation": "Tuyau acier D66x76"}, {"code": "101 018 3", "designation": "Tiroir de rangement 19 pouces"}, {"code": "101 140 1", "designation": "Tuyau PEHD"}, {"code": "101 145 6", "designation": "Pigtail FC/PC"}, {"code": "101 665 9", "designation": "Piton accroch inox béton 6mm"}, {"code": "101 762 5", "designation": "Tuyau acier D80x90"}, {"code": "101 815 8", "designation": "Rehausse metallique 1,20 m"}, {"code": "101 986 5", "designation": "Entretoise variable 20/11"}, {"code": "102 275 9", "designation": "Boulon d'assemblage 1/12 25mm"}, {"code": "102 312 1", "designation": "Dispositif horizont L3T 1200mm"}, {"code": "102 526 2", "designation": "Pince d'ancrage FO ADSS8"}, {"code": "102 667 2", "designation": "Dispositif horizont L2T 1060mm"}, {"code": "103 069 3", "designation": "Pince AC560"}, {"code": "103 106 5", "designation": "Anneau de tirage acier galva"}, {"code": "103 316 8", "designation": "Pince d'ancrage FO ADSS14"}, {"code": "103 388 5", "designation": "Tiroir optique 19\" FC/PC 12 FO"}, {"code": "103 867 5", "designation": "Décapant pr tuyau PVC (bte1kg)"}, {"code": "104 037 1", "designation": "Etiquette plastique PM Verte"}, {"code": "104 055 5", "designation": "Dispositif de suspens JHC15-20"}, {"code": "104 166 8", "designation": "Sleeve (Smoov) (40mm)"}, {"code": "104 747 9", "designation": "Tiroir optique 19\" FC/PC 48 FO"}, {"code": "104 775 2", "designation": "Tiroir optique 19\" FC/PC 6 FO"}, {"code": "104 840 7", "designation": "Pince d'ancrage FO ADSS10"}, {"code": "104 863 6", "designation": "Piton accroch inox bois 6mm"}, {"code": "105 067 7", "designation": "Gaine 1/2 tube lg.3m (lumière)"}, {"code": "105 138 4", "designation": "Tiroir optique 19\" FC/PC 24 FO"}, {"code": "105 242 8", "designation": "Dispositif de suspens JHC10-15"}, {"code": "105 657 0", "designation": "Kit piton 5mm pour paroi beton"}, {"code": "105 996 0", "designation": "Sleeve (Smoov)"}, {"code": "106 153 6", "designation": "Collier RISLAN 9/92"}, {"code": "106 643 2", "designation": "Tiroir optique 19\" FC/PC 36 FO"}, {"code": "106 689 0", "designation": "Dispositif de suspens JHC10-15"}, {"code": "106 715 6", "designation": "Pince d'ancrage FO ADSS6"}, {"code": "106 728 6", "designation": "Boulon TH galva 6x20 av rond 6"}, {"code": "106 733 0", "designation": "Semelle ALPAX 5/17"}, {"code": "106 934 1", "designation": "Gaine verte"}, {"code": "107 147 4", "designation": "Cheville plastique N°8"}, {"code": "107 367 6", "designation": "Boulon TH galva CL6,8 8x20"}, {"code": "107 404 8", "designation": "Vis à bois 4 x 35 (zin TF)"}, {"code": "107 449 9", "designation": "Dispositif horizont  L1T 430mm"}, {"code": "107 503 8", "designation": "Entraxe 5/33"}, {"code": "107 512 0", "designation": "Traverse 5/14 11 trous"}, {"code": "107 704 9", "designation": "Semelle à goupille 7/05"}, {"code": "107 834 3", "designation": "Dispositif horizont K2C1285mm"}, {"code": "108 047 6", "designation": "Collier RISLAN 9/42"}, {"code": "108 132 9", "designation": "Câble prise de terre 16mm² v/j"}, {"code": "108 332 3", "designation": "Tuyau acier D102x114"}, {"code": "108 909 7", "designation": "Pince d'ancrage FO 810R 360"}, {"code": "108 807 6", "designation": "Gaine orange"}, {"code": "108 825 0", "designation": "Fil nylon diamètre 3mm"}, {"code": "109 503 6", "designation": "Attache plastique N°5 gris"}, {"code": "109 665 1", "designation": "Etiquette plastique orange"}, {"code": "109 767 2", "designation": "Pince d'ancrage FO ADSS12"}, {"code": "109 908 9", "designation": "Console universel (rp sm alpax"}, {"code": "109 587 6", "designation": "KIT INSTAL PARABOL LNB + CABLE"}, {"code": "105 019 6", "designation": "PARABOLE ACIER 60CM + SUP FIX"}, {"code": "109 456 5", "designation": "Attache plastique N°6 gris"}, {"code": "100 096 2", "designation": "Câble MM St L1041 G652 D 48FO"}, {"code": "100 149 5", "designation": "Câble MM St L1041 G652 D 6FO"}, {"code": "100 270 6", "designation": "Câble LT St L1042 G652 D 72FO"}, {"code": "100 295 9", "designation": "Câble MM St L1041 G652 D  24FO"}, {"code": "100 315 4", "designation": "Câble MM St L1041 G652 D 60FO"}, {"code": "100 704 6", "designation": "Câble LT Aér L1092 G652D 24FO"}, {"code": "101 152 4", "designation": "Câble Ext L1092 G657 A2 1FO"}, {"code": "101 171 5", "designation": "Câble MM St L1041 G652 D 12FO"}, {"code": "101 812 7", "designation": "Câble MM Aér L1092 G657A2 6FO"}, {"code": "101 907 0", "designation": "Câble LT St L1041 G652 D 6FO"}, {"code": "102 054 0", "designation": "Câble MM Aér L1092 G657A2 48FO"}, {"code": "102 105 9", "designation": "Câble L1082 G657 A2 1 FO Ivoir"}, {"code": "102 636 8", "designation": "Câble LT St  L1041 G652 D 24FO"}, {"code": "102 700 6", "designation": "Câble LT Aér L1092 G652D 36FO"}, {"code": "102 925 3", "designation": "Câble LT St  L1041 G652 D 36FO"}, {"code": "102 993 2", "designation": "Câble LT Aér L1092 G652D 48FO"}, {"code": "103 006 8", "designation": "Câble MM Aér L1092 G657A2 12FO"}, {"code": "103 472 1", "designation": "Câble LT Aér L1092 G652D 12FO"}, {"code": "104 832 2", "designation": "Câble LT St  L1041 G652 D 12FO"}, {"code": "105 028 8", "designation": "Câble MM Aér L1092 G657A2 24FO"}, {"code": "105 031 8", "designation": "Câble Ext  L1092 G657 A2 2FO"}, {"code": "105 937 3", "designation": "Câble MM St L1042 G652 D 96FO"}, {"code": "106 587 9", "designation": "Câble LT St  L1041 G652 D 60FO"}, {"code": "107 162 5", "designation": "Câble MM St L1041 G652 D 36FO"}, {"code": "107 195 5", "designation": "Câble MM St L1042 G652 D 144FO"}, {"code": "107 621 9", "designation": "CABLE BRANCH 2XGAIN 1FO G657A2"}, {"code": "107 409 3", "designation": "Câble LT St  L1041 G652 D 48FO"}, {"code": "107 875 6", "designation": "Câble LT St L1042 G652 D 144FO"}, {"code": "108 335 4", "designation": "Câble LT Aér L1092 G652 D 6FO"}, {"code": "108 931 8", "designation": "Câble MM Aér L1092 G657A2 36FO"}, {"code": "108 963 9", "designation": "Câble L1082 G657 A2  2FO Ivoir"}, {"code": "109 294 3", "designation": "Câble LT St  L1042 G652 D 96FO"}, {"code": "109 546 3", "designation": "Câble MM St L1042 G652 D 72FO"}, {"code": "110 149 1", "designation": "CABLE MM SOUT G657A2 144FO m12"}, {"code": "110 050 1", "designation": "Câble Vertical G657 24FO Ivoi"}, {"code": "110 052 1", "designation": "Câble Vertical G657 48FO Ivoir"}, {"code": "110 048 1", "designation": "Câble Vertical G657 A2 6FO Ivo"}, {"code": "110 049 1", "designation": "Câble Vertical G657 12FO Ivoi"}, {"code": "110 051 1", "designation": "Câble Vertical G657 36FO Ivoi"}, {"code": "110 053 1", "designation": "Câble Vertical G657 A2 60FO Iv"}, {"code": "110 054 1", "designation": "Câble Vertical G657 72FO Ivoi"}, {"code": "110 137 1", "designation": "Câble L1082 G657 A2 1 FO blanc"}, {"code": "110 138 1", "designation": "Câble L1088 G657 A2  2FO blanc"}, {"code": "110 139 1", "designation": "Câble L 1082 G657 A2 4FO blanc"}, {"code": "110 140 1", "designation": "Câble L 1083 G657 A2 4FO noir"}, {"code": "107 851 0", "designation": "CABLE MM SOUT G657A2 288FO M12"}, {"code": "100 067 2", "designation": "Cyberoam 300 Ing"}, {"code": "100 182 2", "designation": "VWIC3-2MFT-E1"}, {"code": "100 186 0", "designation": "Poste SIP Maxwell Basic"}, {"code": "100 219 5", "designation": "CAB-449MT=RS-449 Câble, DTE,"}, {"code": "100 267 6", "designation": "CISCO CP7942G"}, {"code": "100 278 2", "designation": "Jarr monomode duplex FC-LC 10m"}, {"code": "100 331 4", "designation": "SFP-6"}, {"code": "100 514 1", "designation": "Poste GrandStream GXP1628"}, {"code": "100 558 5", "designation": "CATALYST 9200 24P-E"}, {"code": "100 692 6", "designation": "CISCO ISR 4331"}, {"code": "103 584 1", "designation": "RAD ETX-1P ROA ( L2/L3)"}, {"code": "100 853 1", "designation": "Modem RAISECOM RAX701-L"}, {"code": "100 706 0", "designation": "jarr monomode duplex LC-LC 10m"}, {"code": "100 784 8", "designation": "Routeur Cisco 4221 SEC/K9"}, {"code": "100 945 3", "designation": "WS - 2960S - 24TS - S"}, {"code": "100 966 8", "designation": "jarr monomode duplex FC-LC 10m"}, {"code": "101 133 3", "designation": "Poste Télép GLOBAL CS SIP-U31P"}, {"code": "101 391 7", "designation": "Pika Warp V3"}, {"code": "101 553 9", "designation": "Châssis MP-4104"}, {"code": "101 573 7", "designation": "Reglette Krone 2X10 BF"}, {"code": "101 587 4", "designation": "Repeteur HDSL SAGEM 2G"}, {"code": "101 653 6", "designation": "Jarr mnmde duplex FC-SC APC 5m"}, {"code": "101 678 9", "designation": "RAD ETX-2I-B (L2/L3)"}, {"code": "101 729 8", "designation": "HWIC-3G-GSM"}, {"code": "101 783 0", "designation": "Routeur Cisco 4321 SEC/K9"}, {"code": "102 010 6", "designation": "GIGASET S650H PRO Noir"}, {"code": "102 035 9", "designation": "Ens reglette 32x3 Ecranté+capo"}, {"code": "102 069 4", "designation": "Jarr monomode duplex FC-SC 3m"}, {"code": "102 155 4", "designation": "Routeur Cisco 4331 SEC/K9"}, {"code": "102 204 9", "designation": "SFP-2"}, {"code": "102 308 4", "designation": "WS - C3560G - 24PS - S"}, {"code": "102 379 4", "designation": "GIGASET DX800A"}, {"code": "102 393 0", "designation": "Postes Num Aastra 5370"}, {"code": "102 409 8", "designation": "Jarr monomode duplex FC-FC 25m"}, {"code": "102 557 6", "designation": "EHWIC-1GE-SFP-CU"}, {"code": "106 394 3", "designation": "Jarretière mnde Simplex  LC/APC long 3m d 2,5mm jaune"}, {"code": "102 794 5", "designation": "Postes Num Aastra 5361"}, {"code": "102 817 1", "designation": "Routeur CISCO 4321-V/K9"}, {"code": "102 825 6", "designation": "CISCO2811 - V/K9"}, {"code": "102 843 0", "designation": "CISCO ISR 4431 SEC/K9"}, {"code": "102 898 0", "designation": "jarr monomode duplex FC-LC 25m"}, {"code": "102 964 2", "designation": "ASA 5505 -BUN -K09"}, {"code": "103 033 4", "designation": "jarr monomode duplex FC-FC 10m"}, {"code": "103 079 2", "designation": "MP-4100M-ETH/SFP"}, {"code": "103 117 1", "designation": "Poste SIP Maxwell 3"}, {"code": "103 168 3", "designation": "Adaptateur Transfix V36/X24V11"}, {"code": "103 264 2", "designation": "HWIC-1T = 1-port serial WAN"}, {"code": "103 724 1", "designation": "Carte Cisco NIM-ES-4"}, {"code": "103 401 1", "designation": "Livebox business 350 (LBB 350)"}, {"code": "103 437 0", "designation": "CATALYST C9300L-24T-4G-E"}, {"code": "103 984 9", "designation": "Jarr monomode duplex LC-LC 25m"}, {"code": "103 821 7", "designation": "Modem RAISECOM RAX711-L-4GE-AC"}, {"code": "104 052 4", "designation": "RICi-8 E1/ETH"}, {"code": "104 053 1", "designation": "IPBX IX 100 Global CS"}, {"code": "104 142 2", "designation": "CAB-X21FC"}, {"code": "104 455 3", "designation": "Coffret dist NTU Schmid X21"}, {"code": "104 637 3", "designation": "CATALYST 9200L 24T-4G-E"}, {"code": "104 646 5", "designation": "Support reglette krone"}, {"code": "104 724 0", "designation": "Régie pt à pt moy débit 2532"}, {"code": "104 756 1", "designation": "AMSI-52CDF/E1B/4W/RJ45"}, {"code": "104 787 5", "designation": "Jarr monomode duplex FC-SC 15m"}, {"code": "104 854 4", "designation": "Jarr monomode duplex LC-LC 10m"}, {"code": "104 926 8", "designation": "jarr monomode duplex FC-SC 10m"}, {"code": "104 985 5", "designation": "Jarr mnmd duplex LC-SC APC 10m"}, {"code": "105 015 8", "designation": "Coffret TNR 6G IPS ELCON"}, {"code": "105 129 2", "designation": "GLC - LH - SM"}, {"code": "105 217 6", "designation": "Câble MSL8-SCS40/RJ45"}, {"code": "105 376 0", "designation": "CISCO Catalyst 8200L"}, {"code": "105 414 9", "designation": "Alimentation Maxwell 3 § Basic"}, {"code": "105 469 9", "designation": "Boitier Pack PBX pr SMB"}, {"code": "105 487 3", "designation": "ASMI-52/E1/4W/ETH"}, {"code": "105 808 6", "designation": "PBX Plug 401"}, {"code": "105 864 2", "designation": "VIC2-2BRI-NT/TE"}, {"code": "105 879 6", "designation": "Module SFP-6 Adaptable"}, {"code": "105 947 2", "designation": "IPBX IX 50 Global CS"}, {"code": "105 983 0", "designation": "CISCO Câble -SS - X21MT"}, {"code": "105 990 8", "designation": "Poste Télép GLOBAL CS SIP-U33P"}, {"code": "106 125 3", "designation": "Module USFP -Gb/S1-D-R"}, {"code": "106 423 0", "designation": "ASMI-52L/ETH/4W"}, {"code": "106 775 0", "designation": "Carte LTU Schmid P6 2accès"}, {"code": "101 970 4", "designation": "Catalyst C1000-24FP-4G-L"}, {"code": "102 773 0", "designation": "Livebox business 500 (LBB 500)"}, {"code": "102 812 6", "designation": "Routeur Cisco C1121X-8P"}, {"code": "104 945 9", "designation": "Catalyst C9200L-24P-4G-E"}, {"code": "105 693 8", "designation": "Livebox business 360 (LBB 360)"}, {"code": "106 854 2", "designation": "Cyberoam 100 Ing"}, {"code": "106 915 0", "designation": "Jarr monomode duplex SC-LC 10m"}, {"code": "106 947 1", "designation": "ASA 5505 - SEC - BUN - K9"}, {"code": "107 070 5", "designation": "OP-108L/B/ETH/SC/13L"}, {"code": "107 111 5", "designation": "CISCO2901/K9-CCME"}, {"code": "107 236 5", "designation": "FG-60C"}, {"code": "107 603 5", "designation": "SG100D-08 8-Port G Desktop Swi"}, {"code": "107 610 3", "designation": "Postes Num Aastra 5380"}, {"code": "107 644 8", "designation": "WIC - 1B - S/T - V3 = 1 - port"}, {"code": "107 655 4", "designation": "Cyberoam 35 Ing"}, {"code": "107 775 9", "designation": "CAB-X21MT"}, {"code": "107 796 4", "designation": "Switch FO L2 ETS-1"}, {"code": "107 882 4", "designation": "Jarr monomode duplex FC-LC 15m"}, {"code": "108 002 5", "designation": "Carte d'accès 2T0 1150"}, {"code": "108 226 5", "designation": "jarr monomode duplex FC-LC 3m"}, {"code": "108 509 9", "designation": "Jarr mde dup FC/UPC-SC/APC 25m"}, {"code": "108 735 2", "designation": "PBX Plug 4/0v2"}, {"code": "108 843 4", "designation": "Jarr monomode duplex FC-LC 25m"}, {"code": "108 872 4", "designation": "Jarr monomode duplex FC-LC 3m"}, {"code": "104 564 2", "designation": "Routeur HUAWEI AR6121E"}, {"code": "103 040 2", "designation": "Routeur HUAWEI AR6140E"}, {"code": "109 042 0", "designation": "Câble pour HP1220, HP1150"}, {"code": "105 987 8", "designation": "Jarr monomode duplex FC-FC 25m"}, {"code": "103 712 8", "designation": "Livebox business 154 (LBB 154)"}, {"code": "109 076 5", "designation": "Baie FT RTNM PAM 42U PORTE OCU"}, {"code": "109 146 5", "designation": "IPBX IX 30 Global CS"}, {"code": "109 308 7", "designation": "RICi-16 E1/ETH"}, {"code": "109 377 3", "designation": "Coffret dist NTU Schmid ETH"}, {"code": "109 629 3", "designation": "Carte Optimux FO/4E1"}, {"code": "109 834 1", "designation": "HWIC-4B - S/T"}, {"code": "109 900 3", "designation": "Câble convDB44 E1 RJ45 ASMI54C"}, {"code": "103 034 1", "designation": "Jar sp md 2x SC/APC bl 1,5m d2"}, {"code": "109 430 5", "designation": "Jarr simpl SC/APC - SC/APC 15m"}, {"code": "107 483 3", "designation": "Jarr simpl SC/APC - SC/APC 25m"}, {"code": "100 861 6", "designation": "LBB 150 with FTTH jet license"}, {"code": "101 040 4", "designation": "Livebox business 150 (LBB 150)"}, {"code": "101 067 1", "designation": "PBX Plug 101"}, {"code": "101 294 1", "designation": "One Cell 35"}, {"code": "102 226 1", "designation": "Management console câble"}, {"code": "105 865 9", "designation": "Livebox business 240 (LBB 240)"}, {"code": "106 263 2", "designation": "PBX Plug 103"}, {"code": "103 804 0", "designation": "Terminal IP-FANVIL C58P"}, {"code": "100 870 8", "designation": "Module SFP 1000BASE BX10"}, {"code": "105 319 7", "designation": "Jarr mde dup FC/PC 15m Jn"}, {"code": "106 528 2", "designation": "Module SFP-1000 Base-LX10"}, {"code": "105 492 7", "designation": "PBX Plug 102"}, {"code": "101 619 2", "designation": "Jar mde Sp SC/APC-SC/PC 3,5m J"}, {"code": "100 101 1", "designation": "Etiquette pr PTO bch 25,4x15,2"}, {"code": "110 001 1", "designation": "RFO-Ferme 2M-6 Niveaux+Acc"}, {"code": "110 002 1", "designation": "RFO Chassis 12 Plato 144 FO"}, {"code": "110 003 1", "designation": "RFO Mod préc 4 Cplr 2X2 SC/APC"}, {"code": "110 004 1", "designation": "RFO Modules préco 12 SC/APC"}, {"code": "110 005 1", "designation": "RFO boit éclt Decam D18 T D5X3"}, {"code": "110 006 1", "designation": "Tube de protection FO D5X3 Blc"}, {"code": "110 007 1", "designation": "Boîtier épiss BPEO T0 avc sup"}, {"code": "110 008 1", "designation": "Boîtier épiss BPEO T2 CDP 28 P"}, {"code": "110 009 1", "designation": "BPEO T2  EVOL EDP + Acc"}, {"code": "110 010 1", "designation": "BPEO T2 BDP 28 Pas + Support"}, {"code": "110 011 1", "designation": "Boîtier épiss BPEO T1 EDP 12 P"}, {"code": "110 012 1", "designation": "Btier épiss BPEO T1,5 EDP 12P"}, {"code": "110 013 1", "designation": "Boitier d'étage + K7"}, {"code": "110 014 1", "designation": "Boitier de Pt Brchmt Aérien+K7"}, {"code": "110 015 1", "designation": "Boitier de Transit° imble + K7"}, {"code": "110 017 1", "designation": "Prise Term Opt  (PTO) 1 SC/APC"}, {"code": "110 019 1", "designation": "Boîtier de démarcation"}, {"code": "110 020 1", "designation": "Valise mtge Fiberlock+Cleaveus"}, {"code": "110 021 1", "designation": "Epissure meca Fiberlock"}, {"code": "110 022 1", "designation": "Armoire de Rue 22U+Kit P/Insta"}, {"code": "110 023 1", "designation": "Armoire de Rue 14U+Kit P/Insta"}, {"code": "110 024 1", "designation": "Tiroir Optiq 144 SC/APC 19\" 3U"}, {"code": "110 025 1", "designation": "Tiroir Optiq 72 SC/APC 19\"1,5U"}, {"code": "110 026 1", "designation": "Tiroir Optiq 48 SC/APC 19\"1,5U"}, {"code": "110 027 1", "designation": "Tiroir Optq 24 SC/APC 19\" 1,5U"}, {"code": "110 028 1", "designation": "Cassette 1 Slot 12 fusions"}, {"code": "110 029 1", "designation": "Tube de protect° FO D5X3 Bleu"}, {"code": "110 030 1", "designation": "Tiroir Optiq 4 cpl 128 SC/APC"}, {"code": "110 031 1", "designation": "Module optiq d'Imble 36 SC/APC"}, {"code": "110 032 1", "designation": "Module optiq d'Imble 48 SC/APC"}, {"code": "110 035 1", "designation": "Tiroir Optiq 48 SC/APC 19\"1,5U Pivot droite"}, {"code": "110 037 1", "designation": "Tiroir Optiq 48 SC/APC 19\" 2U"}, {"code": "110 040 1", "designation": "Prise Term Opt (PTO) 2 SC/APC"}, {"code": "110 041 1", "designation": "PTO Précablé 1 SC/APC 30M"}, {"code": "110 043 1", "designation": "Tiroir Op 128 SC/APC 19\" 3U"}, {"code": "110 044 1", "designation": "Armoire de rue 2x28U+ Kit inst"}, {"code": "110 047 1", "designation": "Kit de pose& instal Arm 22/14U"}, {"code": "110 059 1", "designation": "Breakout 72FO Mod12 LC/UPC 50m"}, {"code": "110 060 1", "designation": "Breakout 72FO Mod12 LC/UPC 100"}, {"code": "110 064 1", "designation": "Breakout 72FO Mod12 SC/UPC 50m"}, {"code": "110 065 1", "designation": "Breakout 72FO Mod12 SC/UPC 100"}, {"code": "110 068 1", "designation": "ECAM Simple 5/18 Evol"}, {"code": "110 069 1", "designation": "ECAM Double D5-20 Evol"}, {"code": "110 070 1", "designation": "ECAM Double D5-27 Evol"}, {"code": "110 073 1", "designation": "ECAM S12-4/12 Evol"}, {"code": "110 074 1", "designation": "ECAM S9 5-3,5 / 9,5 Evol"}, {"code": "110 075 1", "designation": "Jrt SC/APC Splx mde Bc l1,5 D3"}, {"code": "110 076 1", "designation": "Jrt LC/SC Splx mde Bc l1,5 D3"}, {"code": "110 077 1", "designation": "Jart SC/APC Splex mmde L3,5 D2"}, {"code": "110 078 1", "designation": "Jart SC/APC Splex mmde L4,5 D2"}, {"code": "110 079 1", "designation": "Modul optiq Imble 72FO SC/APC"}, {"code": "110 080 1", "designation": "Jrt SC/APC Splx mde Or L3,5 D2"}, {"code": "110 081 1", "designation": "Tiroir FO 2cpl 1x32-64 SC/APC"}, {"code": "110 082 1", "designation": "Tiroir FO 1cpl 1x32-32 SC/APC"}, {"code": "110 083 1", "designation": "BAEP pr Loose tub 1/12 Tub 5mm"}, {"code": "110 084 1", "designation": "BAEP Universel 1/12 Tubes 5mm"}, {"code": "110 085 1", "designation": "Jrt SC/APC Splx mde L1,5 D2 Jn"}, {"code": "110 086 1", "designation": "UNISUB 1U 24SC/APC PIVOTT A DR"}, {"code": "110 087 1", "designation": "BPEO T1,5 FDP DROPS"}, {"code": "110 088 1", "designation": "BPEO T1,5 FDP BRANCH"}, {"code": "110 089 1", "designation": "Boïtier épiss  BPEO T1  CDP"}, {"code": "110 090 1", "designation": "BAEP Micromod Tub 1/12 tub 5mm"}, {"code": "110 091 1", "designation": "Module d'imb de rangmt de Jart"}, {"code": "110 092 1", "designation": "Jrt SC/APC Splx mde L1,5 D2 bl"}, {"code": "110 093 1", "designation": "Jrt SC/APC Splx mde Jn l2,5 D2"}, {"code": "110 094 1", "designation": "Jrt SC/APC Splx mde l2,5 D2 Bc"}, {"code": "110 095 1", "designation": "Jrt SC/APC Splx mde l3,5 D2 Jn"}, {"code": "110 096 1", "designation": "Jrt SC/APC Splx mde l3,5 D2 Bc"}, {"code": "110 106 1", "designation": "ECAM S7 - 3/7 EVOL"}, {"code": "110 107 1", "designation": "Jrt SC/APC Splx mde Bch L3m D3"}, {"code": "110 108 1", "designation": "Breakout 72FO Mod 4 SC/UPC 50"}, {"code": "110 109 1", "designation": "Breakout 72FO Mod 4 SC/UPC 100"}, {"code": "110 110 1", "designation": "Btier épiss BPEO T1 FDP BRANCH"}, {"code": "110 111 1", "designation": "Armoire d rue 2x28U éqpé+socle"}, {"code": "110 119 1", "designation": "Tube protect° FO D5X3 Blc SRO"}, {"code": "110 128 1", "designation": "Prise Term Opt (PTO) 4 SC/APC"}, {"code": "110 129 1", "designation": "Jrt SC/APC Splx mde L3m D3 ivo"}, {"code": "110 130 1", "designation": "Jrt SC/APC Splx mde L1 D2 bc"}, {"code": "110 131 1", "designation": "Support de fixation PBO T2"}, {"code": "110 132 1", "designation": "K7 pour BPEO 5mm 12 fusions"}, {"code": "110 133 1", "designation": "Coupleur PLC 1x8 40x4x4mm 250µ"}, {"code": "110 134 1", "designation": "K7 pour cpleur 5mm 9 fusions"}, {"code": "110 135 1", "designation": "Kit ECAM D18 Evol"}, {"code": "110 136 1", "designation": "ECAM Double D18-15/18"}, {"code": "110 141 1", "designation": "Boitier épiss  T1 4 S EOC"}, {"code": "110 145 1", "designation": "ONT I-010G-U"}, {"code": "110 146 1", "designation": "Jar mnde simp SC/APC-SC/APC 3m"}, {"code": "110 148 1", "designation": "Jarret mmde dupl FC/SC APC 3m"}, {"code": "110 150 1", "designation": "Jar SC/APC simp mmde 4,5 d2 ja"}, {"code": "110 151 1", "designation": "Jar SC/APC simp mmde 5m d2 jau"}, {"code": "110 152 1", "designation": "RFO BEC DEECAM + Equerre fixat"}, {"code": "110 153 1", "designation": "RFO Chassis + 12Mod SC/APC 144"}, {"code": "110 154 1", "designation": "RFO Ferme 2M 6 Niv + Acc IXIO"}, {"code": "110 155 1", "designation": "HUB-BOX  1 core  1:8 BPE"}, {"code": "110 156 1", "designation": "Splitter 1 core 1:8 BPE"}, {"code": "110 157 1", "designation": "HUB-BOX  2 core 1:8 BPE"}, {"code": "110 158 1", "designation": "Splitter 2 core in 1:8 BPE"}, {"code": "110 159 1", "designation": "HUB-BOX  1 core in 1:16 BPE"}, {"code": "110 160 1", "designation": "SUB-BOX  1 core Cable aer 1:8"}, {"code": "110 161 1", "designation": "END-BOX 1 core Cable aer 1:8"}, {"code": "110 162 1", "designation": "SUB-BOX 1 core Cable duc 1:8"}, {"code": "110 163 1", "designation": "END-BOX 1 core Cable duc 1:8"}, {"code": "110 164 1", "designation": "SUB-BOX 1 core Cable mix 1:16"}, {"code": "110 165 1", "designation": "END-BOX 1 core Cable mix 1:16"}, {"code": "110 166 1", "designation": "SUB-BOX  2 core Cable mix 1:8"}, {"code": "110 167 1", "designation": "END-BOX  2 core Cable mix 1:8"}, {"code": "110 168 1", "designation": "HUB-BOX  Indr 1 core 1:8 BPE"}, {"code": "110 169 1", "designation": "SUB-BOX Indr 1:9 PLC 10m cable"}, {"code": "110 170 1", "designation": "END-BOX Indr 1:9 PLC 10m cable"}, {"code": "110 171 1", "designation": "Dis Cable 1 core in duc 15m"}, {"code": "110 172 1", "designation": "Dis Cable 1 core in duc 25m"}, {"code": "110 173 1", "designation": "Dis Cable 1 core in duc 50m"}, {"code": "110 174 1", "designation": "Dis Cable 1 core in duc 80m"}, {"code": "110 175 1", "designation": "Dis Cable 1 core in duc 100m"}, {"code": "110 176 1", "designation": "Dis Cable 1 core in duc 120m"}, {"code": "110 177 1", "designation": "Dis Cable 1 core in duc 150m"}, {"code": "110 178 1", "designation": "Dis Cable 1 core in duc 180m"}, {"code": "110 179 1", "designation": "Dis Cable 1 core in duc 200m"}, {"code": "110 180 1", "designation": "Dis Cable 1 core in duc 250m"}, {"code": "110 181 1", "designation": "Dis Cable 1 core in duc 300m"}, {"code": "110 182 1", "designation": "Dis Cable 1 core in duc 350m"}, {"code": "110 183 1", "designation": "Dis Cable 1 core in aer 50m"}, {"code": "110 184 1", "designation": "Dis Cable 1 core in aer 60m"}, {"code": "110 185 1", "designation": "Dis Cable 1 core in aer 80m"}, {"code": "110 186 1", "designation": "Dis Cable 1 core in aer 100m"}, {"code": "110 187 1", "designation": "Dis Cable 1 core in aer 120m"}, {"code": "110 188 1", "designation": "Dis Cable 1 core in aer 150m"}, {"code": "110 189 1", "designation": "Dis Cable 1 core in aer 180m"}, {"code": "110 190 1", "designation": "Dis Cable 1 core in aer 200m"}, {"code": "110 191 1", "designation": "Dis Cable 1 core in aer 250m"}, {"code": "110 192 1", "designation": "Dis Cable 1 core in aer 300m"}, {"code": "110 193 1", "designation": "Dis Cable 1 core in aer 350m"}, {"code": "110 194 1", "designation": "Dis Cable 1 core in aer 400m"}, {"code": "110 195 1", "designation": "Dis Cable 1 core in aer 500m"}, {"code": "110 196 1", "designation": "Dis Cable 1 core in aer 600m"}, {"code": "110 197 1", "designation": "Dis Cable 2 core in mix 60m"}, {"code": "110 198 1", "designation": "Dis Cable 2 core in mix 100m"}, {"code": "110 199 1", "designation": "Dis Cable 2 core in mix 150m"}, {"code": "110 200 1", "designation": "Dis Cable 2 core in mix 250m"}, {"code": "110 201 1", "designation": "Dis Cable 2 core in mix 300m"}, {"code": "110 202 1", "designation": "Dis Cable 2 core in mix 350m"}, {"code": "110 203 1", "designation": "Dis Cable 2 core in mix 400m"}, {"code": "110 204 1", "designation": "Dis Cable 2 core in mix 500m"}, {"code": "110 205 1", "designation": "Dis Cable 2 core in mix 600m"}, {"code": "110 206 1", "designation": "Drop Cable 1 connectr 15m"}, {"code": "110 207 1", "designation": "Drop Cable 1 connectr 30m"}, {"code": "110 208 1", "designation": "Drop Cable 1 connectr 50m"}, {"code": "110 209 1", "designation": "Drop Cable 1 connectr 60m"}, {"code": "110 210 1", "designation": "Drop Cable 1 connectr 80m"}, {"code": "110 211 1", "designation": "Drop Cable 1 connectr 100m"}, {"code": "110 212 1", "designation": "Drop Cable 1 connectr 180m"}, {"code": "110 213 1", "designation": "Drop Cable 1 connectr 200m"}, {"code": "110 214 1", "designation": "Drop Cable 1 connectr 250m"}, {"code": "110 215 1", "designation": "Drop Cable 1 connectr 350m"}, {"code": "110 216 1", "designation": "Drop Cable 1 connectr duc 250m"}, {"code": "110 217 1", "designation": "Drop Cable 1 connectr duc 350m"}, {"code": "110 218 1", "designation": "Drop Cable indr 1 connectr 10m"}, {"code": "110 219 1", "designation": "Drop Cable indr 1 connectr 20m"}, {"code": "110 220 1", "designation": "Drop Cable indr 1 connectr 30m"}, {"code": "110 221 1", "designation": "Drop Cable indr 1 connectr 40m"}, {"code": "110 222 1", "designation": "Drop Cable indr 1 connectr 50m"}, {"code": "110 223 1", "designation": "Drop Cable indr 1 connectr 60m"}, {"code": "110 224 1", "designation": "Pole hoop clamp anchor conectr"}, {"code": "110 225 1", "designation": "Access Termination Box (ATB)"}, {"code": "110 226 1", "designation": "Clamping Dis Cbl on the ple/wl"}, {"code": "110 227 1", "designation": "Plum ring hook fix tool fr pol"}, {"code": "110 228 1", "designation": "Fast Conec Closur fr 1 cor cbl"}, {"code": "110 229 1", "designation": "Fast Conec Closur fr 2 cor cbl"}, {"code": "110 230 1", "designation": "Steel belt to fix BPE, PBO"}, {"code": "110 231 1", "designation": "Steel belt to fix BPE"}, {"code": "110 232 1", "designation": "Clampg Drop Cbl on the wal"}, {"code": "110 233 1", "designation": "Clampg Drop Cbl on the pol/wal"}, {"code": "110 234 1", "designation": "Dis Cable 1 core in mix 150m"}, {"code": "110 235 1", "designation": "Dis Cable 1 core in mix 250m"}, {"code": "110 236 1", "designation": "Dis Cable 1 core in mix 350m"}, {"code": "110 237 1", "designation": "Dis Cable 1 core in mix 450m"}, {"code": "110 238 1", "designation": "Boitier épiss BPEO T3 EDP 28P"}, {"code": "110 239 1", "designation": "Encre R4300 pour  BRADY BMP71"}, {"code": "110 240 1", "designation": "Encre R6000 pour  BRADY BMP71"}, {"code": "110 241 1", "designation": "Drop Cable indr 1 connect 100m"}, {"code": "110 242 1", "designation": "Drop Cable 1 connect 500m"}, {"code": "110 243 1", "designation": "Drop Cable 1 connect 600m"}, {"code": "110 245 1", "designation": "PTO1:5 Un. dist.SC/APC ATB2121"}, {"code": "110 246 1", "designation": "PTO ATB 2120 T1 SC/APC"}, {"code": "110 247 1", "designation": "Cab. Op. Tprt,2xSC/APC,50m ODN"}, {"code": "110 248 1", "designation": "Cab. Op. Tprt,2xSC/APC,40m ODN"}, {"code": "110 249 1", "designation": "Cab. Op. Tprt,2xSC/APC,30m ODN"}, {"code": "110 250 1", "designation": "Connec. Opt. montable sur site"}, {"code": "104 696 0", "designation": "Jar mnde simp 2x SC/APC 1m jn"}, {"code": "106 597 8", "designation": "Jar mnde simp 2x SC/APC 2m bl"}, {"code": "101 456 3", "designation": "Jar mnde simp 2x SC/APC 2m jn"}, {"code": "104 429 4", "designation": "Jar mnde simp 2X SC/APC 3m bl"}, {"code": "108 100 8", "designation": "Poteau Octogonal béton 9m"}, {"code": "106 115 4", "designation": "Semelle traverse 8 trous"}, {"code": "107 636 3", "designation": "Traverse 5/15 13 trous"}, {"code": "105 736 2", "designation": "Semelle Équerre"}, {"code": "108 403 0", "designation": "Poteau type LEGROS H 0.80m"}, {"code": "107 131 3", "designation": "Poteau béton armé 9/200"}, {"code": "102 711 2", "designation": "Breakout 72FO Mod12 LC/UPC 25m"}, {"code": "103 056 3", "designation": "Breakout 72FO Mod12 SC/UPC 25m"}, {"code": "107 530 4", "designation": "Coupleur PLC 1x4"}];
+
+let rows = [];
+let selectedArticle = null;
+let showAllDates = false;
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function getSessionDate(){
+  return document.getElementById('sessionDate').value || todayISO();
+}
+
+// Ecoute en temps réel : toute modification (par n'importe quel utilisateur) met à jour l'affichage.
+onValue(rowsRef, (snapshot)=>{
+  const val = snapshot.val() || {};
+  rows = Object.keys(val).map(id => ({ id, ...val[id] }));
+  render();
+});
+
+document.getElementById('sessionDate').value = todayISO();
+
+// Evalue une saisie type "3*3*4*6" ou "4055+8177+18830" en toute sécurité.
+// N'autorise que chiffres, + - * / ( ) . et espaces. Retourne null si vide, NaN si invalide.
+function evalCompteur(expr){
+  if(expr === null || expr === undefined) return null;
+  const trimmed = String(expr).trim();
+  if(trimmed === '') return null;
+  if(!/^[0-9+\-*/(). \s]+$/.test(trimmed)) return NaN;
+  if(/[+\-*/.]\s*$/.test(trimmed)) return NaN; // expression incomplète, ex: "3*3*"
+  try{
+    const val = Function('"use strict"; return (' + trimmed + ')')();
+    if(typeof val !== 'number' || !isFinite(val)) return NaN;
+    return val;
+  }catch(e){
+    return NaN;
+  }
+}
+
+function computeStatus(r){
+  const c1 = evalCompteur(r.c1);
+  const c2 = evalCompteur(r.c2);
+  const c3 = evalCompteur(r.c3);
+
+  if(c1 === null || c2 === null || Number.isNaN(c1) || Number.isNaN(c2)){
+    return { status:'incomplet', total:null, ecart:null, c1v:c1, c2v:c2 };
+  }
+  if(c1 === c2){
+    return { status:'ok', total:c1, ecart:0, c1v:c1, c2v:c2 };
+  }
+  const ecart = Math.abs(c1 - c2);
+  if(c3 !== null && !Number.isNaN(c3)){
+    return { status:'arbitre', total:c3, ecart, c1v:c1, c2v:c2, c3v:c3 };
+  }
+  return { status:'attente', total:null, ecart, c1v:c1, c2v:c2 };
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function renderCalcHint(raw, val){
+  const rawTrim = raw === null || raw === undefined ? '' : String(raw).trim();
+  if(rawTrim === '') return '<div class="cell-calc"></div>';
+  if(Number.isNaN(val)) return '<div class="cell-calc invalid">expr. invalide</div>';
+  if(val !== null && rawTrim !== String(val)) return `<div class="cell-calc">= ${val.toLocaleString('fr-FR')}</div>`;
+  return '<div class="cell-calc"></div>';
+}
+
+function formatDateFr(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/* ---------- Combobox article ---------- */
+const inArticle = document.getElementById('inArticle');
+const comboDrop = document.getElementById('comboDrop');
+const selectedTag = document.getElementById('selectedTag');
+document.getElementById('masterCount').textContent = MASTER_ARTICLES.length + ' articles référencés';
+
+function renderCombo(query){
+  const q = query.trim().toLowerCase();
+  let matches;
+  if(q === ''){
+    matches = [];
+  } else {
+    matches = MASTER_ARTICLES.filter(a =>
+      a.code.toLowerCase().includes(q) || a.designation.toLowerCase().includes(q)
+    ).slice(0, 30);
+  }
+
+  if(matches.length === 0){
+    comboDrop.innerHTML = q === '' ? '' : '<div class="combo-empty">Aucun article trouvé pour "'+escapeHtml(query)+'"</div>';
+    comboDrop.classList.toggle('open', q !== '');
+    return;
+  }
+  comboDrop.innerHTML = matches.map(a =>
+    `<div class="combo-item" data-code="${escapeHtml(a.code)}"><span class="code">${escapeHtml(a.code)}</span><span class="desc">${escapeHtml(a.designation)}</span></div>`
+  ).join('');
+  comboDrop.classList.add('open');
+
+  comboDrop.querySelectorAll('.combo-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const code = el.getAttribute('data-code');
+      const art = MASTER_ARTICLES.find(a=>a.code === code);
+      selectArticle(art);
+    });
+  });
+}
+
+function selectArticle(art){
+  selectedArticle = art;
+  inArticle.value = art.code + ' — ' + art.designation;
+  selectedTag.textContent = 'Article sélectionné : ' + art.designation;
+  selectedTag.classList.add('show');
+  comboDrop.classList.remove('open');
+  document.getElementById('inEmplacement').focus();
+}
+
+inArticle.addEventListener('input', ()=>{
+  if(selectedArticle){
+    selectedArticle = null;
+    selectedTag.classList.remove('show');
+  }
+  renderCombo(inArticle.value);
+});
+inArticle.addEventListener('focus', ()=>{
+  if(!selectedArticle) renderCombo(inArticle.value);
+});
+document.addEventListener('click', (e)=>{
+  if(!comboDrop.contains(e.target) && e.target !== inArticle){
+    comboDrop.classList.remove('open');
+  }
+});
+
+function bindCounterPreview(inputId, previewId){
+  const inp = document.getElementById(inputId);
+  const prev = document.getElementById(previewId);
+  inp.addEventListener('input', ()=>{
+    const val = evalCompteur(inp.value);
+    if(val === null){ prev.textContent = ''; prev.className = 'calc-preview'; return; }
+    if(Number.isNaN(val)){ prev.textContent = 'Expression invalide'; prev.className = 'calc-preview invalid'; return; }
+    prev.textContent = inp.value.trim() !== String(val) ? '= ' + val.toLocaleString('fr-FR') : '';
+    prev.className = 'calc-preview valid';
+  });
+}
+bindCounterPreview('inC1','previewC1');
+bindCounterPreview('inC2','previewC2');
+
+document.getElementById('sessionDate').addEventListener('change', render);
+document.getElementById('toggleAllDates').addEventListener('change', (e)=>{
+  showAllDates = e.target.checked;
+  render();
+});
+
+/* ---------- Table + archive render ---------- */
+function render(){
+  const activeDate = getSessionDate();
+  const host = document.getElementById('tableHost');
+  const visibleRows = showAllDates ? rows : rows.filter(r => (r.date || todayISO()) === activeDate);
+
+  document.getElementById('sessionInfo').textContent =
+    showAllDates ? 'Affichage : toutes les dates (' + rows.length + ' lignes au total)'
+                 : visibleRows.length + ' ligne(s) pour le ' + formatDateFr(activeDate);
+
+  let nbLignes = visibleRows.length;
+  let nbOk = 0, nbEcart = 0, totalGlobal = 0;
+  visibleRows.forEach(r=>{
+    const s = computeStatus(r);
+    if(s.status === 'ok') nbOk++;
+    if(s.status === 'ok' || s.status === 'arbitre') totalGlobal += s.total || 0;
+    if(s.status === 'attente') nbEcart++;
+  });
+  document.getElementById('statArticles').textContent = nbLignes;
+  document.getElementById('statOk').textContent = nbOk;
+  document.getElementById('statEcart').textContent = nbEcart;
+  document.getElementById('statTotal').textContent = totalGlobal.toLocaleString('fr-FR');
+
+  const entrepots = [...new Set(rows.map(r=>r.entrepot).filter(Boolean))];
+  document.getElementById('entrepotList').innerHTML = entrepots.map(e=>`<option value="${escapeHtml(e)}">`).join('');
+
+  if(visibleRows.length === 0){
+    host.innerHTML = '<div class="empty">Aucun comptage pour cette date. Ajoutez votre première ligne ci-dessus.</div>';
+  } else {
+    const groups = [];
+    const groupMap = {};
+    visibleRows.forEach(r=>{
+      const key = r.entrepot || '(sans entrepôt)';
+      if(!groupMap[key]){ groupMap[key] = []; groups.push(key); }
+      groupMap[key].push(r);
+    });
+
+    let html = `<table><thead><tr>
+      <th>#</th>${showAllDates ? '<th>Date</th>' : ''}<th>Code</th><th>Désignation</th><th>Emplacement</th>
+      <th>Compteur 1</th><th>Compteur 2</th><th>Écart</th><th>Compteur 3 (arbitrage)</th>
+      <th>Total</th><th>Statut</th><th></th>
+    </tr></thead><tbody>`;
+
+    let counter = 0;
+    groups.forEach(gname=>{
+      html += `<tr class="grp-row"><td colspan="${showAllDates ? 12 : 11}">${escapeHtml(gname)}</td></tr>`;
+      groupMap[gname].forEach(r=>{
+        counter++;
+        const s = computeStatus(r);
+        const rowClass = s.status === 'attente' ? 'row-danger' : '';
+        let badge = '';
+        if(s.status === 'ok') badge = '<span class="badge ok">Conforme</span>';
+        else if(s.status === 'arbitre') badge = '<span class="badge warn">Arbitré</span>';
+        else if(s.status === 'attente') badge = '<span class="badge danger">À résoudre</span>';
+        else badge = '<span class="badge" style="background:#F0F0F0;color:#595959;">Incomplet</span>';
+
+        html += `<tr class="${rowClass}" data-id="${r.id}">
+          <td>${counter}</td>
+          ${showAllDates ? `<td>${formatDateFr(r.date)}</td>` : ''}
+          <td style="font-variant-numeric:tabular-nums;">${escapeHtml(r.code||'')}</td>
+          <td>${escapeHtml(r.designation||'')}</td>
+          <td><input class="cell wide" value="${escapeHtml(r.emplacement||'')}" data-field="emplacement"></td>
+          <td><div class="cell-wrap"><input class="cell" type="text" inputmode="decimal" value="${escapeHtml(r.c1 ?? '')}" data-field="c1" placeholder="ex: 3*3*4*6">${renderCalcHint(r.c1, s.c1v)}</div></td>
+          <td><div class="cell-wrap"><input class="cell" type="text" inputmode="decimal" value="${escapeHtml(r.c2 ?? '')}" data-field="c2" placeholder="ex: 4055+8177">${renderCalcHint(r.c2, s.c2v)}</div></td>
+          <td>${s.ecart !== null ? s.ecart : '—'}</td>
+          <td>${s.status === 'attente' || s.status === 'arbitre' ? `<div class="cell-wrap"><input class="cell" type="text" inputmode="decimal" value="${escapeHtml(r.c3 ?? '')}" data-field="c3">${renderCalcHint(r.c3, s.c3v)}</div>` : '—'}</td>
+          <td class="total-cell">${s.total !== null ? s.total : '—'}</td>
+          <td>${badge}</td>
+          <td><button class="icon-btn" data-del="${r.id}" title="Supprimer">✕</button></td>
+        </tr>`;
+      });
+    });
+
+    html += '</tbody></table>';
+    host.innerHTML = html;
+
+    host.querySelectorAll('input[data-field]').forEach(inp=>{
+      inp.addEventListener('change', e=>{
+        const tr = e.target.closest('tr');
+        const id = tr.getAttribute('data-id');
+        const field = e.target.getAttribute('data-field');
+        let val = e.target.value;
+        if(['c1','c2','c3'].includes(field) && val === ''){
+          val = null;
+        }
+        fbUpdate(ref(db, 'rows/' + id), { [field]: val });
+      });
+    });
+
+    host.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        const id = e.target.getAttribute('data-del');
+        fbRemove(ref(db, 'rows/' + id));
+      });
+    });
+  }
+
+  renderArchive(activeDate);
+}
+
+function renderArchive(activeDate){
+  const host = document.getElementById('archiveList');
+  const dateMap = {};
+  rows.forEach(r=>{
+    const d = r.date || todayISO();
+    if(!dateMap[d]) dateMap[d] = { count:0, total:0 };
+    dateMap[d].count++;
+    const s = computeStatus(r);
+    if(s.status === 'ok' || s.status === 'arbitre') dateMap[d].total += s.total || 0;
+  });
+  const dates = Object.keys(dateMap).sort((a,b)=> b.localeCompare(a));
+
+  if(dates.length === 0){
+    host.innerHTML = '<div class="empty">Aucune date archivée pour le moment.</div>';
+    return;
+  }
+
+  host.innerHTML = dates.map(d=>{
+    const info = dateMap[d];
+    const isActive = d === activeDate;
+    return `<div class="archive-row ${isActive ? 'active' : ''}">
+      <div class="archive-date">${formatDateFr(d)}</div>
+      <div class="archive-meta">${info.count} ligne(s) &middot; ${info.total.toLocaleString('fr-FR')} unités validées</div>
+      <div class="archive-actions">
+        <button class="btn-ghost btn-sm" data-load="${d}">Charger</button>
+        <button class="btn-primary btn-sm" data-export="${d}">Exporter</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  host.querySelectorAll('[data-load]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const d = e.target.getAttribute('data-load');
+      document.getElementById('sessionDate').value = d;
+      showAllDates = false;
+      document.getElementById('toggleAllDates').checked = false;
+      render();
+    });
+  });
+  host.querySelectorAll('[data-export]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const d = e.target.getAttribute('data-export');
+      exportDate(d);
+    });
+  });
+}
+
+function exportDate(dateISO){
+  const dataRows = rows.filter(r => (r.date || todayISO()) === dateISO);
+  if(dataRows.length === 0){
+    alert('Aucune donnée à exporter pour cette date.');
+    return;
+  }
+  const data = dataRows.map((r, i)=>{
+    const s = computeStatus(r);
+    return {
+      '#': i+1,
+      'Entrepot': r.entrepot || '',
+      'Code Article': r.code || '',
+      'Designation': r.designation || '',
+      'Emplacement': r.emplacement || '',
+      'Compteur 1 (saisie)': r.c1 ?? '',
+      'Compteur 1 (calcul)': s.c1v ?? '',
+      'Compteur 2 (saisie)': r.c2 ?? '',
+      'Compteur 2 (calcul)': s.c2v ?? '',
+      'Ecart': s.ecart ?? '',
+      'Compteur 3 (arbitrage)': r.c3 ?? '',
+      'Total': s.total ?? '',
+      'Statut': s.status === 'ok' ? 'Conforme' : s.status === 'arbitre' ? 'Arbitré' : s.status === 'attente' ? 'À résoudre' : 'Incomplet'
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:4},{wch:14},{wch:14},{wch:38},{wch:20},{wch:16},{wch:14},{wch:16},{wch:14},{wch:8},{wch:16},{wch:10},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Comptage');
+  XLSX.writeFile(wb, `Comptage_Inventaire_${dateISO}.xlsx`);
+}
+
+document.getElementById('btnAdd').addEventListener('click', ()=>{
+  const entrepot = document.getElementById('inEntrepot').value.trim();
+  const emplacement = document.getElementById('inEmplacement').value.trim();
+  const c1raw = document.getElementById('inC1').value;
+  const c2raw = document.getElementById('inC2').value;
+
+  if(!selectedArticle){
+    alert("Merci de sélectionner un article dans la liste (par code ou par désignation).");
+    inArticle.focus();
+    return;
+  }
+  if(!entrepot){
+    alert("Merci de renseigner l'entrepôt.");
+    return;
+  }
+  if(Number.isNaN(evalCompteur(c1raw)) || Number.isNaN(evalCompteur(c2raw))){
+    alert("Un des compteurs contient une expression invalide (ex: 3*3*4*6 ou 4055+8177). Vérifiez la saisie.");
+    return;
+  }
+
+  const newId = uid();
+  set(ref(db, 'rows/' + newId), {
+    date: getSessionDate(),
+    entrepot,
+    code: selectedArticle.code,
+    designation: selectedArticle.designation,
+    emplacement,
+    c1: c1raw === '' ? null : c1raw,
+    c2: c2raw === '' ? null : c2raw,
+    c3: null
+  });
+
+  document.getElementById('inEmplacement').value = '';
+  document.getElementById('inC1').value = '';
+  document.getElementById('inC2').value = '';
+  document.getElementById('previewC1').textContent = '';
+  document.getElementById('previewC2').textContent = '';
+  document.getElementById('inEmplacement').focus();
+});
+
+document.getElementById('btnClearSession').addEventListener('click', ()=>{
+  const activeDate = getSessionDate();
+  const matching = rows.filter(r => (r.date || todayISO()) === activeDate);
+  if(matching.length === 0) return;
+  if(confirm(`Supprimer les ${matching.length} ligne(s) du ${formatDateFr(activeDate)} ? Cette action est irréversible.`)){
+    const updates = {};
+    matching.forEach(r => { updates['rows/' + r.id] = null; });
+    fbUpdate(ref(db), updates);
+  }
+});
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  exportDate(getSessionDate());
+});
+</script>
+</body>
+</html>
