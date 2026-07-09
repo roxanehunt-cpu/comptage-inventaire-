@@ -253,12 +253,12 @@
       </div>
       <div class="field">
         <label>Compteur 1</label>
-        <input id="inC1" type="text" inputmode="decimal" placeholder="ex: 3*3*4*6">
+        <input id="inC1" type="text" inputmode="text" placeholder="ex: 3*3*4*6">
         <div class="calc-preview" id="previewC1"></div>
       </div>
       <div class="field">
         <label>Compteur 2</label>
-        <input id="inC2" type="text" inputmode="decimal" placeholder="ex: 4055+8177+18830">
+        <input id="inC2" type="text" inputmode="text" placeholder="ex: 4055+8177+18830">
         <div class="calc-preview" id="previewC2"></div>
       </div>
       <div class="field">
@@ -557,10 +557,10 @@ function render(){
           <td style="font-variant-numeric:tabular-nums;">${escapeHtml(r.code||'')}</td>
           <td>${escapeHtml(r.designation||'')}</td>
           <td><input class="cell wide" value="${escapeHtml(r.emplacement||'')}" data-field="emplacement"></td>
-          <td><div class="cell-wrap"><input class="cell" type="text" inputmode="decimal" value="${escapeHtml(r.c1 ?? '')}" data-field="c1" placeholder="ex: 3*3*4*6">${renderCalcHint(r.c1, s.c1v)}</div></td>
-          <td><div class="cell-wrap"><input class="cell" type="text" inputmode="decimal" value="${escapeHtml(r.c2 ?? '')}" data-field="c2" placeholder="ex: 4055+8177">${renderCalcHint(r.c2, s.c2v)}</div></td>
+          <td><div class="cell-wrap"><input class="cell" type="text" inputmode="text" value="${escapeHtml(r.c1 ?? '')}" data-field="c1" placeholder="ex: 3*3*4*6">${renderCalcHint(r.c1, s.c1v)}</div></td>
+          <td><div class="cell-wrap"><input class="cell" type="text" inputmode="text" value="${escapeHtml(r.c2 ?? '')}" data-field="c2" placeholder="ex: 4055+8177">${renderCalcHint(r.c2, s.c2v)}</div></td>
           <td>${s.ecart !== null ? s.ecart : '—'}</td>
-          <td>${s.status === 'attente' || s.status === 'arbitre' ? `<div class="cell-wrap"><input class="cell" type="text" inputmode="decimal" value="${escapeHtml(r.c3 ?? '')}" data-field="c3">${renderCalcHint(r.c3, s.c3v)}</div>` : '—'}</td>
+          <td>${s.status === 'attente' || s.status === 'arbitre' ? `<div class="cell-wrap"><input class="cell" type="text" inputmode="text" value="${escapeHtml(r.c3 ?? '')}" data-field="c3">${renderCalcHint(r.c3, s.c3v)}</div>` : '—'}</td>
           <td class="total-cell">${s.total !== null ? s.total : '—'}</td>
           <td>${badge}</td>
           <td><button class="icon-btn" data-del="${r.id}" title="Supprimer">✕</button></td>
