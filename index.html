@@ -514,7 +514,7 @@
 <script type="module">
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set, update as fbUpdate, remove as fbRemove, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAvJrFxUGZ58HGm17MSuEVo4Pj7fdHDtKo",
@@ -529,6 +529,9 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
+// Pas de session persistante : chaque ouverture de l'app redemande la connexion,
+// pratique quand plusieurs personnes partagent le même téléphone/ordinateur.
+setPersistence(auth, inMemoryPersistence);
 const AUTH_DOMAIN = 'comptage-inventaire-orangeci.local';
 
 // Comptes autorisés à voir le panneau d'administration (gestion des utilisateurs).
