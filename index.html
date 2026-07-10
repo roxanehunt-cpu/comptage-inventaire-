@@ -90,7 +90,7 @@
   }
 
   .form-grid{
-    display:grid; grid-template-columns: 1fr 2fr 1.3fr 0.8fr 0.8fr auto; gap:10px;
+    display:grid; grid-template-columns: 1fr 1.8fr 1.1fr 1.1fr 0.7fr 0.7fr auto; gap:10px;
     padding:16px; align-items:end; position:relative;
   }
   .field{position:relative;}
@@ -205,6 +205,53 @@
   .auth-tab.active{background:#fff; color:var(--black); box-shadow:0 1px 3px rgba(0,0,0,0.08);}
   .auth-error{color:var(--danger); font-size:12.5px; margin-top:10px; min-height:16px; text-align:center;}
   .user-chip{font-size:12.5px; color:var(--gris-fonce); font-weight:600; align-self:center; padding:0 4px;}
+
+  .admin-user-row{
+    display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #F0F0F0; flex-wrap:wrap;
+  }
+  .admin-user-row:last-child{border-bottom:none;}
+  .admin-user-name{font-weight:700; font-size:13.5px; min-width:140px;}
+  .admin-user-status{font-size:11.5px; padding:2px 8px; border-radius:100px; font-weight:700;}
+  .admin-user-status.active{background:var(--ok-bg); color:var(--ok);}
+  .admin-user-status.disabled{background:var(--danger-bg); color:var(--danger);}
+
+  .filter-bar{
+    display:grid; grid-template-columns: 1fr 1.4fr 1fr auto; gap:10px; padding:14px 16px;
+    border-bottom:1px solid var(--gris-clair); background:#FCFCFB;
+  }
+  .filter-bar input, .filter-bar select{
+    width:100%; padding:7px 9px; border:1px solid var(--gris-clair); border-radius:7px;
+    font-size:13px; font-family:inherit; background:#fff;
+  }
+  .filter-bar input:focus, .filter-bar select:focus{outline:none; border-color:var(--orange);}
+  .filter-bar label{display:block; font-size:10.5px; color:var(--gris-fonce); margin-bottom:3px; font-weight:700; text-transform:uppercase; letter-spacing:.02em;}
+
+  .offline-banner{
+    background:#FFE1D9; border:1px solid #F4A896; border-radius:10px; padding:10px 14px;
+    font-size:12.5px; color:var(--danger); margin-bottom:16px; display:none; align-items:center; gap:8px; font-weight:700;
+  }
+  .offline-banner.show{display:flex;}
+
+  .range-export{
+    display:flex; align-items:end; gap:10px; padding:14px 16px; border-top:1px solid var(--gris-clair);
+    flex-wrap:wrap; background:#FCFCFB;
+  }
+  .range-export .field label{font-size:10.5px; text-transform:uppercase; letter-spacing:.02em;}
+  .range-export input[type="date"]{padding:7px 9px; border:1px solid var(--gris-clair); border-radius:7px; font-size:13px;}
+
+  .stats-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .stats-table th{text-align:left; padding:8px 12px; background:#FAFAFA; border-bottom:1px solid var(--gris-clair); font-size:10.5px; text-transform:uppercase; color:var(--gris-fonce);}
+  .stats-table td{padding:8px 12px; border-bottom:1px solid #F0F0F0;}
+  .stats-table tr:last-child td{border-bottom:none;}
+  .stats-cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px;}
+  @media (max-width:800px){ .stats-cols{grid-template-columns:1fr;} }
+
+  .stock-upload{padding:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .stock-upload input[type="file"]{font-size:12.5px;}
+  .stock-status{font-size:12px; color:var(--gris-fonce);}
+  .ecart-pos{color:var(--danger); font-weight:700;}
+  .ecart-neg{color:#8A5A00; font-weight:700;}
+  .ecart-zero{color:var(--ok); font-weight:700;}
 </style>
 </head>
 <body>
@@ -259,6 +306,11 @@
 
 <div id="appContent" style="display:none;">
 <div class="wrap">
+
+  <div class="offline-banner" id="offlineBanner">
+    <span>📴</span>
+    <span id="offlineBannerText">Hors ligne — tes saisies sont gardées sur ce téléphone et se synchroniseront au retour du réseau.</span>
+  </div>
 
   <header>
     <div class="brand">
@@ -321,6 +373,10 @@
         <input id="inEmplacement" placeholder="ex: Zone A - Rack 3">
       </div>
       <div class="field">
+        <label>Commentaire (optionnel)</label>
+        <input id="inCommentaire" placeholder="ex: carton abîmé">
+      </div>
+      <div class="field">
         <label>Compteur 1</label>
         <input id="inC1" type="text" inputmode="text" placeholder="ex: 3*3*4*6">
         <div class="calc-preview" id="previewC1"></div>
@@ -338,6 +394,24 @@
 
   <div class="card">
     <h2>Détail du comptage</h2>
+    <div class="filter-bar">
+      <div class="field">
+        <label>Filtrer par entrepôt</label>
+        <input id="filterEntrepot" list="entrepotList" placeholder="Tous les entrepôts">
+      </div>
+      <div class="field">
+        <label>Filtrer par article (code ou désignation)</label>
+        <input id="filterArticle" placeholder="Rechercher...">
+      </div>
+      <div class="field">
+        <label>Filtrer par auteur</label>
+        <input id="filterAuteur" list="auteurList" placeholder="Tous les auteurs">
+        <datalist id="auteurList"></datalist>
+      </div>
+      <div class="field">
+        <button class="btn-ghost" id="btnClearFilters" style="width:100%;">Effacer les filtres</button>
+      </div>
+    </div>
     <div id="tableHost"></div>
     <div class="footer-note">Les compteurs acceptent des calculs directs : "3*3*4*6" pour un rangement en piles/rangées, ou "4055+8177+18830" pour additionner plusieurs sous-totaux — le résultat s'affiche automatiquement sous la case. L'article reste sélectionné après l'ajout : renseignez juste un nouvel emplacement et les compteurs pour enchaîner les comptages du même article. Quand Compteur 1 et Compteur 2 diffèrent, une colonne d'arbitrage (Compteur 3) apparaît sur la ligne pour trancher.</div>
   </div>
@@ -345,15 +419,72 @@
   <div class="card">
     <h2>Archive des inventaires</h2>
     <div class="archive-list" id="archiveList"></div>
-    <div class="footer-note">Chaque date d'inventaire forme un dossier séparé. Cliquez sur "Charger" pour continuer la saisie d'une date passée, ou "Exporter" pour extraire uniquement les données de cette date.</div>
+    <div class="range-export">
+      <div class="field">
+        <label>Exporter une plage — du</label>
+        <input type="date" id="rangeFrom">
+      </div>
+      <div class="field">
+        <label>au</label>
+        <input type="date" id="rangeTo">
+      </div>
+      <button class="btn-primary" id="btnExportRange">Exporter la plage</button>
+    </div>
+    <div class="footer-note">Chaque date d'inventaire forme un dossier séparé. Cliquez sur "Charger" pour continuer la saisie d'une date passée, ou "Exporter" pour extraire uniquement les données de cette date. L'export de plage regroupe toutes les dates comprises entre "du" et "au" (inclus) dans un seul fichier.</div>
+  </div>
+  <div class="card">
+    <h2>Statistiques <span class="chip">de la vue actuelle</span></h2>
+    <div class="stats-cols">
+      <div>
+        <div style="font-size:12.5px; font-weight:700; margin-bottom:8px;">Par entrepôt</div>
+        <div id="statsByEntrepot"></div>
+      </div>
+      <div>
+        <div style="font-size:12.5px; font-weight:700; margin-bottom:8px;">Par auteur</div>
+        <div id="statsByAuteur"></div>
+      </div>
+    </div>
+    <div class="footer-note">Ces statistiques portent sur la vue actuellement affichée (date active, ou toutes les dates / filtres si activés).</div>
+  </div>
+
+  <div class="card">
+    <h2>Comparatif stock théorique <span class="chip" id="stockTheoCount"></span></h2>
+    <div class="stock-upload">
+      <input type="file" id="stockTheoFile" accept=".xlsx,.xls,.csv">
+      <span class="stock-status" id="stockTheoStatus">Aucun fichier chargé — le comparatif reste optionnel.</span>
+    </div>
+    <div id="stockTheoTable"></div>
+    <div class="footer-note">Charge un fichier avec au minimum une colonne "Code Article" (ou "Code") et une colonne "Quantité" (ou "Qté", "Stock"). Il est partagé avec toute l'équipe une fois chargé. La comparaison se fait entre la quantité théorique et le total validé de la vue actuelle, tous entrepôts confondus pour un même code.</div>
+  </div>
+
+  <div class="card" id="adminCard" style="display:none;">
+    <h2>Administration des comptes</h2>
+    <div style="padding:16px;">
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr auto; padding:0; margin-bottom:16px;">
+        <div class="field">
+          <label>Nouveau nom d'utilisateur</label>
+          <input id="adminNewUsername" placeholder="ex: mamadou">
+        </div>
+        <div class="field">
+          <label>Mot de passe initial (6 car. min.)</label>
+          <input id="adminNewPassword" type="text" placeholder="ex: orange2026">
+        </div>
+        <div class="field">
+          <button class="btn-primary" id="btnAdminCreate" style="width:100%;">Créer le compte</button>
+        </div>
+      </div>
+      <div class="auth-error" id="adminCreateError" style="text-align:left;"></div>
+      <div id="adminUsersList" style="margin-top:10px;"></div>
+    </div>
+    <div class="footer-note">Le mot de passe initial n'est visible qu'une seule fois ici, au moment de la création — transmets-le directement à la personne. Firebase ne permet pas de le "revoir" ensuite ; en cas d'oubli, désactive le compte et recrées-en un nouveau avec le même nom. "Désactiver" bloque immédiatement l'accès à l'app sans supprimer l'historique des saisies de la personne.</div>
   </div>
 
 </div>
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, update as fbUpdate, remove as fbRemove, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, update as fbUpdate, remove as fbRemove, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -370,6 +501,10 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
 const AUTH_DOMAIN = 'comptage-inventaire-orangeci.local';
+
+// Comptes autorisés à voir le panneau d'administration (gestion des utilisateurs).
+// Ajoute d'autres emails techniques ici (username.tolowercase.replace-non-alnum + domaine) si besoin.
+const ADMIN_EMAILS = ['roxane.hunt@comptage-inventaire-orangeci.local'];
 
 function usernameToEmail(username){
   const clean = username.trim().toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
@@ -392,6 +527,57 @@ let rows = [];
 let selectedArticle = null;
 let currentUsername = null;
 let showAllDates = false;
+let stockTheo = {};
+
+/* ---------- File d'attente hors-ligne (sécurité en plus du cache interne de Firebase) ---------- */
+const OFFLINE_KEY = 'inventaire_pending_rows';
+
+function loadQueue(){
+  try{
+    return JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
+  }catch(e){ return []; }
+}
+function saveQueue(queue){
+  try{
+    localStorage.setItem(OFFLINE_KEY, JSON.stringify(queue));
+  }catch(e){ /* stockage indisponible, tant pis */ }
+}
+function queueRow(id, data){
+  const queue = loadQueue();
+  queue.push({ id, data });
+  saveQueue(queue);
+  updateOfflineBanner();
+}
+function dequeueRow(id){
+  saveQueue(loadQueue().filter(item => item.id !== id));
+  updateOfflineBanner();
+}
+function flushQueue(){
+  const queue = loadQueue();
+  if(queue.length === 0) return;
+  queue.forEach(item=>{
+    set(ref(db, 'rows/' + item.id), item.data)
+      .then(()=> dequeueRow(item.id))
+      .catch(()=>{ /* reste en file, retentera plus tard */ });
+  });
+}
+function updateOfflineBanner(){
+  const queue = loadQueue();
+  const banner = document.getElementById('offlineBanner');
+  const text = document.getElementById('offlineBannerText');
+  if(!navigator.onLine){
+    banner.classList.add('show');
+    text.textContent = 'Hors ligne — ' + queue.length + ' saisie(s) en attente sur ce téléphone, elles se synchroniseront au retour du réseau.';
+  } else if(queue.length > 0){
+    banner.classList.add('show');
+    text.textContent = 'Synchronisation en cours... ' + queue.length + ' saisie(s) en attente.';
+  } else {
+    banner.classList.remove('show');
+  }
+}
+window.addEventListener('online', ()=>{ updateOfflineBanner(); flushQueue(); });
+window.addEventListener('offline', updateOfflineBanner);
+setInterval(()=>{ if(navigator.onLine) flushQueue(); updateOfflineBanner(); }, 8000);
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
@@ -412,6 +598,17 @@ onValue(masterArticlesRef, (snapshot)=>{
   dynamicArticles = Object.values(val);
   document.getElementById('masterCount').textContent = allArticles().length + ' articles référencés';
   if(!selectedArticle) renderCombo(inArticle.value);
+});
+
+const stockTheoRef = ref(db, 'stockTheorique');
+onValue(stockTheoRef, (snapshot)=>{
+  stockTheo = snapshot.val() || {};
+  const count = Object.keys(stockTheo).length;
+  document.getElementById('stockTheoCount').textContent = count > 0 ? count + ' codes chargés' : '';
+  document.getElementById('stockTheoStatus').textContent = count > 0
+    ? count + ' codes de référence chargés — comparatif actif.'
+    : 'Aucun fichier chargé — le comparatif reste optionnel.';
+  render();
 });
 
 document.getElementById('sessionDate').value = todayISO();
@@ -449,7 +646,7 @@ document.getElementById('btnRegister').addEventListener('click', async ()=>{
   try{
     const cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
     await updateProfile(cred.user, { displayName: username });
-    await set(ref(db, 'users/' + cred.user.uid), { username });
+    await set(ref(db, 'users/' + cred.user.uid), { username, disabled: false });
   }catch(e){
     if(e.code === 'auth/email-already-in-use'){
       errEl.textContent = 'Ce nom d\'utilisateur est déjà pris.';
@@ -479,18 +676,103 @@ document.getElementById('btnLogout').addEventListener('click', ()=>{
   signOut(auth);
 });
 
-onAuthStateChanged(auth, (user)=>{
+onAuthStateChanged(auth, async (user)=>{
   if(user){
+    try{
+      const snap = await get(ref(db, 'users/' + user.uid));
+      const profile = snap.exists() ? snap.val() : {};
+      if(profile.disabled){
+        await signOut(auth);
+        document.getElementById('loginError').textContent = 'Ce compte a été désactivé. Contacte un administrateur.';
+        return;
+      }
+    }catch(e){
+      console.error('Vérification du compte impossible', e);
+    }
+
     currentUsername = user.displayName || (user.email ? user.email.split('@')[0] : 'Utilisateur');
     document.getElementById('userChip').textContent = 'Connecté : ' + currentUsername;
     authOverlay.style.display = 'none';
     appContent.style.display = 'block';
+    updateOfflineBanner();
+    flushQueue();
+
+    if(ADMIN_EMAILS.includes(user.email)){
+      document.getElementById('adminCard').style.display = 'block';
+      initAdminUsersList();
+    } else {
+      document.getElementById('adminCard').style.display = 'none';
+    }
   } else {
     currentUsername = null;
     authOverlay.style.display = 'flex';
     appContent.style.display = 'none';
   }
 });
+
+/* ---------- Panneau admin : créer / désactiver des comptes ---------- */
+document.getElementById('btnAdminCreate').addEventListener('click', async ()=>{
+  const username = document.getElementById('adminNewUsername').value.trim();
+  const password = document.getElementById('adminNewPassword').value;
+  const errEl = document.getElementById('adminCreateError');
+  errEl.textContent = '';
+  if(!username || !password){
+    errEl.textContent = "Merci de renseigner un nom d'utilisateur et un mot de passe.";
+    return;
+  }
+  if(password.length < 6){
+    errEl.textContent = 'Le mot de passe doit faire au moins 6 caractères.';
+    return;
+  }
+  try{
+    // App Firebase secondaire : crée le compte sans déconnecter l'admin en cours.
+    const secondaryApp = initializeApp(firebaseConfig, 'AdminCreate_' + Date.now());
+    const secondaryAuth = getAuth(secondaryApp);
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, usernameToEmail(username), password);
+    await updateProfile(cred.user, { displayName: username });
+    await set(ref(db, 'users/' + cred.user.uid), { username, disabled: false });
+    await signOut(secondaryAuth);
+    await deleteApp(secondaryApp);
+
+    document.getElementById('adminNewUsername').value = '';
+    document.getElementById('adminNewPassword').value = '';
+    errEl.style.color = 'var(--ok)';
+    errEl.textContent = 'Compte "' + username + '" créé. Transmets-lui son mot de passe maintenant.';
+  }catch(e){
+    errEl.style.color = 'var(--danger)';
+    errEl.textContent = e.code === 'auth/email-already-in-use' ? 'Ce nom d\'utilisateur est déjà pris.' : 'Erreur : ' + e.message;
+  }
+});
+
+function initAdminUsersList(){
+  onValue(ref(db, 'users'), (snapshot)=>{
+    const val = snapshot.val() || {};
+    const host = document.getElementById('adminUsersList');
+    const entries = Object.entries(val);
+    if(entries.length === 0){
+      host.innerHTML = '<div class="empty">Aucun compte créé pour le moment.</div>';
+      return;
+    }
+    host.innerHTML = entries.map(([uid, u])=>{
+      const disabled = !!u.disabled;
+      return `<div class="admin-user-row">
+        <div class="admin-user-name">${escapeHtml(u.username || uid)}</div>
+        <div class="admin-user-status ${disabled ? 'disabled' : 'active'}">${disabled ? 'Désactivé' : 'Actif'}</div>
+        <button class="btn-ghost btn-sm" data-toggle-uid="${uid}" data-disabled="${disabled}" style="margin-left:auto;">
+          ${disabled ? 'Réactiver' : 'Désactiver'}
+        </button>
+      </div>`;
+    }).join('');
+
+    host.querySelectorAll('[data-toggle-uid]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uid = btn.getAttribute('data-toggle-uid');
+        const isDisabled = btn.getAttribute('data-disabled') === 'true';
+        fbUpdate(ref(db, 'users/' + uid), { disabled: !isDisabled });
+      });
+    });
+  });
+}
 
 // Evalue une saisie type "3*3*4*6" ou "4055+8177+18830" en toute sécurité.
 // N'autorise que chiffres, + - * / ( ) . et espaces. Retourne null si vide, NaN si invalide.
@@ -649,16 +931,82 @@ document.getElementById('toggleAllDates').addEventListener('change', (e)=>{
   showAllDates = e.target.checked;
   render();
 });
+document.getElementById('filterEntrepot').addEventListener('input', render);
+document.getElementById('filterArticle').addEventListener('input', render);
+document.getElementById('filterAuteur').addEventListener('input', render);
+document.getElementById('btnClearFilters').addEventListener('click', ()=>{
+  document.getElementById('filterEntrepot').value = '';
+  document.getElementById('filterArticle').value = '';
+  document.getElementById('filterAuteur').value = '';
+  render();
+});
+
+document.getElementById('stockTheoFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('stockTheoStatus');
+  statusEl.textContent = 'Lecture du fichier...';
+  const reader = new FileReader();
+  reader.onload = (evt)=>{
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      if(json.length === 0){
+        statusEl.textContent = 'Le fichier semble vide.';
+        return;
+      }
+      const sampleKeys = Object.keys(json[0]);
+      const findKey = (candidates)=>{
+        for(const cand of candidates){
+          const found = sampleKeys.find(k => k.trim().toLowerCase() === cand);
+          if(found) return found;
+        }
+        return null;
+      };
+      const codeKey = findKey(['code article', 'code_article', 'code']);
+      const qtyKey = findKey(['quantité', 'quantite', 'qté', 'qte', 'stock', 'quantity', 'quantité théorique', 'quantite theorique']);
+      if(!codeKey || !qtyKey){
+        statusEl.textContent = 'Colonnes non reconnues. Il faut une colonne "Code Article" et une colonne "Quantité".';
+        return;
+      }
+      const obj = {};
+      json.forEach(row=>{
+        const code = String(row[codeKey]).trim();
+        const qty = Number(row[qtyKey]);
+        if(code) obj[code] = Number.isFinite(qty) ? qty : 0;
+      });
+      set(stockTheoRef, obj);
+      statusEl.textContent = Object.keys(obj).length + ' codes chargés et partagés avec l\'équipe.';
+    }catch(err){
+      statusEl.textContent = 'Erreur de lecture du fichier : ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
 
 /* ---------- Table + archive render ---------- */
 function render(){
   const activeDate = getSessionDate();
   const host = document.getElementById('tableHost');
-  const visibleRows = showAllDates ? rows : rows.filter(r => (r.date || todayISO()) === activeDate);
+  const dateRows = showAllDates ? rows : rows.filter(r => (r.date || todayISO()) === activeDate);
 
   document.getElementById('sessionInfo').textContent =
     showAllDates ? 'Affichage : toutes les dates (' + rows.length + ' lignes au total)'
-                 : visibleRows.length + ' ligne(s) pour le ' + formatDateFr(activeDate);
+                 : dateRows.length + ' ligne(s) pour le ' + formatDateFr(activeDate);
+
+  // Filtres (entrepôt / article / auteur) appliqués par-dessus le filtre de date
+  const fEntrepot = document.getElementById('filterEntrepot').value.trim().toLowerCase();
+  const fArticle = document.getElementById('filterArticle').value.trim().toLowerCase();
+  const fAuteur = document.getElementById('filterAuteur').value.trim().toLowerCase();
+
+  const visibleRows = dateRows.filter(r=>{
+    if(fEntrepot && !(r.entrepot||'').toLowerCase().includes(fEntrepot)) return false;
+    if(fArticle && !((r.code||'').toLowerCase().includes(fArticle) || (r.designation||'').toLowerCase().includes(fArticle))) return false;
+    if(fAuteur && !(r.auteur||'').toLowerCase().includes(fAuteur)) return false;
+    return true;
+  });
 
   let nbLignes = visibleRows.length;
   let nbOk = 0, nbEcart = 0, totalGlobal = 0;
@@ -675,9 +1023,11 @@ function render(){
 
   const entrepots = [...new Set(rows.map(r=>r.entrepot).filter(Boolean))];
   document.getElementById('entrepotList').innerHTML = entrepots.map(e=>`<option value="${escapeHtml(e)}">`).join('');
+  const auteurs = [...new Set(rows.map(r=>r.auteur).filter(Boolean))];
+  document.getElementById('auteurList').innerHTML = auteurs.map(a=>`<option value="${escapeHtml(a)}">`).join('');
 
   if(visibleRows.length === 0){
-    host.innerHTML = '<div class="empty">Aucun comptage pour cette date. Ajoutez votre première ligne ci-dessus.</div>';
+    host.innerHTML = '<div class="empty">Aucun comptage à afficher pour ces critères.</div>';
   } else {
     const groups = [];
     const groupMap = {};
@@ -688,14 +1038,14 @@ function render(){
     });
 
     let html = `<table><thead><tr>
-      <th>#</th>${showAllDates ? '<th>Date</th>' : ''}<th>Code</th><th>Désignation</th><th>Emplacement</th>
+      <th>#</th>${showAllDates ? '<th>Date</th>' : ''}<th>Code</th><th>Désignation</th><th>Emplacement</th><th>Commentaire</th>
       <th>Compteur 1</th><th>Compteur 2</th><th>Écart</th><th>Compteur 3 (arbitrage)</th>
       <th>Total</th><th>Statut</th><th>Auteur</th><th></th>
     </tr></thead><tbody>`;
 
     let counter = 0;
     groups.forEach(gname=>{
-      html += `<tr class="grp-row"><td colspan="${showAllDates ? 13 : 12}">${escapeHtml(gname)}</td></tr>`;
+      html += `<tr class="grp-row"><td colspan="${showAllDates ? 14 : 13}">${escapeHtml(gname)}</td></tr>`;
       groupMap[gname].forEach(r=>{
         counter++;
         const s = computeStatus(r);
@@ -712,6 +1062,7 @@ function render(){
           <td style="font-variant-numeric:tabular-nums;">${escapeHtml(r.code||'')}</td>
           <td>${escapeHtml(r.designation||'')}</td>
           <td><input class="cell wide" value="${escapeHtml(r.emplacement||'')}" data-field="emplacement"></td>
+          <td><input class="cell wide" value="${escapeHtml(r.commentaire||'')}" data-field="commentaire" placeholder="—"></td>
           <td><div class="cell-wrap"><input class="cell" type="text" inputmode="text" value="${escapeHtml(r.c1 ?? '')}" data-field="c1" placeholder="ex: 3*3*4*6">${renderCalcHint(r.c1, s.c1v)}</div></td>
           <td><div class="cell-wrap"><input class="cell" type="text" inputmode="text" value="${escapeHtml(r.c2 ?? '')}" data-field="c2" placeholder="ex: 4055+8177">${renderCalcHint(r.c2, s.c2v)}</div></td>
           <td>${s.ecart !== null ? s.ecart : '—'}</td>
@@ -748,7 +1099,96 @@ function render(){
     });
   }
 
+  renderStatsTables(visibleRows);
+  renderStockComparison(visibleRows);
   renderArchive(activeDate);
+}
+
+function renderStatsTables(filteredRows){
+  const byEntrepot = {};
+  filteredRows.forEach(r=>{
+    const key = r.entrepot || '(sans entrepôt)';
+    if(!byEntrepot[key]) byEntrepot[key] = { lignes:0, codes:new Set(), ecarts:0, total:0 };
+    const s = computeStatus(r);
+    byEntrepot[key].lignes++;
+    byEntrepot[key].codes.add(r.code);
+    if(s.status === 'attente') byEntrepot[key].ecarts++;
+    if(s.total !== null) byEntrepot[key].total += s.total;
+  });
+  const entrepotHost = document.getElementById('statsByEntrepot');
+  const entrepotKeys = Object.keys(byEntrepot).sort();
+  entrepotHost.innerHTML = entrepotKeys.length === 0
+    ? '<div class="empty">Aucune donnée.</div>'
+    : `<table class="stats-table"><thead><tr><th>Entrepôt</th><th>Lignes</th><th>Articles</th><th>Écarts</th><th>Qté validée</th></tr></thead><tbody>` +
+      entrepotKeys.map(k=>{
+        const d = byEntrepot[k];
+        return `<tr><td>${escapeHtml(k)}</td><td>${d.lignes}</td><td>${d.codes.size}</td><td>${d.ecarts}</td><td>${d.total.toLocaleString('fr-FR')}</td></tr>`;
+      }).join('') + '</tbody></table>';
+
+  const byAuteur = {};
+  filteredRows.forEach(r=>{
+    const key = r.auteur || '(inconnu)';
+    if(!byAuteur[key]) byAuteur[key] = { lignes:0, ecarts:0 };
+    const s = computeStatus(r);
+    byAuteur[key].lignes++;
+    if(s.status === 'attente') byAuteur[key].ecarts++;
+  });
+  const auteurHost = document.getElementById('statsByAuteur');
+  const auteurKeys = Object.keys(byAuteur).sort();
+  auteurHost.innerHTML = auteurKeys.length === 0
+    ? '<div class="empty">Aucune donnée.</div>'
+    : `<table class="stats-table"><thead><tr><th>Auteur</th><th>Lignes saisies</th><th>Écarts</th></tr></thead><tbody>` +
+      auteurKeys.map(k=>{
+        const d = byAuteur[k];
+        return `<tr><td>${escapeHtml(k)}</td><td>${d.lignes}</td><td>${d.ecarts}</td></tr>`;
+      }).join('') + '</tbody></table>';
+}
+
+function renderStockComparison(filteredRows){
+  const host = document.getElementById('stockTheoTable');
+  const theoCodes = Object.keys(stockTheo);
+  if(theoCodes.length === 0){
+    host.innerHTML = '';
+    return;
+  }
+  const comptePar = {};
+  filteredRows.forEach(r=>{
+    const s = computeStatus(r);
+    if(s.total !== null){
+      comptePar[r.code] = (comptePar[r.code] || 0) + s.total;
+    }
+  });
+  const allCodes = new Set([...theoCodes, ...Object.keys(comptePar)]);
+  const lines = Array.from(allCodes).map(code=>{
+    const theo = stockTheo[code] !== undefined ? Number(stockTheo[code]) : null;
+    const compte = comptePar[code] !== undefined ? comptePar[code] : null;
+    const ecart = (theo !== null && compte !== null) ? compte - theo : null;
+    const article = allArticles().find(a=>a.code === code);
+    return { code, designation: article ? article.designation : '', theo, compte, ecart };
+  }).filter(l => l.theo !== null || l.compte !== null)
+    .sort((a,b)=> Math.abs(b.ecart || 0) - Math.abs(a.ecart || 0));
+
+  if(lines.length === 0){
+    host.innerHTML = '<div class="empty">Aucune correspondance entre le stock théorique et les comptages actuels.</div>';
+    return;
+  }
+
+  host.innerHTML = `<table class="stats-table"><thead><tr>
+      <th>Code</th><th>Désignation</th><th>Théorique</th><th>Compté</th><th>Écart</th>
+    </tr></thead><tbody>` + lines.map(l=>{
+      let ecartClass = 'ecart-zero', ecartText = '—';
+      if(l.ecart !== null){
+        ecartText = (l.ecart > 0 ? '+' : '') + l.ecart.toLocaleString('fr-FR');
+        ecartClass = l.ecart === 0 ? 'ecart-zero' : (l.ecart > 0 ? 'ecart-pos' : 'ecart-neg');
+      }
+      return `<tr>
+        <td style="font-variant-numeric:tabular-nums;">${escapeHtml(l.code)}</td>
+        <td>${escapeHtml(l.designation)}</td>
+        <td>${l.theo !== null ? l.theo.toLocaleString('fr-FR') : '—'}</td>
+        <td>${l.compte !== null ? l.compte.toLocaleString('fr-FR') : '—'}</td>
+        <td class="${ecartClass}">${ecartText}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
 }
 
 function renderArchive(activeDate){
@@ -798,20 +1238,17 @@ function renderArchive(activeDate){
   });
 }
 
-function exportDate(dateISO){
-  const dataRows = rows.filter(r => (r.date || todayISO()) === dateISO);
-  if(dataRows.length === 0){
-    alert('Aucune donnée à exporter pour cette date.');
-    return;
-  }
-  const data = dataRows.map((r, i)=>{
+function rowsToExportData(dataRows, withDate){
+  return dataRows.map((r, i)=>{
     const s = computeStatus(r);
-    return {
-      '#': i+1,
+    const base = { '#': i+1 };
+    if(withDate) base['Date'] = formatDateFr(r.date);
+    return Object.assign(base, {
       'Entrepot': r.entrepot || '',
       'Code Article': r.code || '',
       'Designation': r.designation || '',
       'Emplacement': r.emplacement || '',
+      'Commentaire': r.commentaire || '',
       'Compteur 1 (saisie)': r.c1 ?? '',
       'Compteur 1 (calcul)': s.c1v ?? '',
       'Compteur 2 (saisie)': r.c2 ?? '',
@@ -821,18 +1258,50 @@ function exportDate(dateISO){
       'Total': s.total ?? '',
       'Statut': s.status === 'ok' ? 'Conforme' : s.status === 'arbitre' ? 'Arbitré' : s.status === 'attente' ? 'À résoudre' : 'Incomplet',
       'Auteur': r.auteur || ''
-    };
+    });
   });
+}
+
+function exportDate(dateISO){
+  const dataRows = rows.filter(r => (r.date || todayISO()) === dateISO);
+  if(dataRows.length === 0){
+    alert('Aucune donnée à exporter pour cette date.');
+    return;
+  }
+  const data = rowsToExportData(dataRows, false);
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:4},{wch:14},{wch:14},{wch:38},{wch:20},{wch:16},{wch:14},{wch:16},{wch:14},{wch:8},{wch:16},{wch:10},{wch:12},{wch:14}];
+  ws['!cols'] = [{wch:4},{wch:14},{wch:14},{wch:38},{wch:20},{wch:20},{wch:16},{wch:14},{wch:16},{wch:14},{wch:8},{wch:16},{wch:10},{wch:12},{wch:14}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Comptage');
   XLSX.writeFile(wb, `Comptage_Inventaire_${dateISO}.xlsx`);
 }
 
+function exportRange(fromISO, toISO){
+  if(!fromISO || !toISO){
+    alert('Merci de renseigner les deux dates (du / au).');
+    return;
+  }
+  const [from, to] = fromISO <= toISO ? [fromISO, toISO] : [toISO, fromISO];
+  const dataRows = rows.filter(r=>{
+    const d = r.date || todayISO();
+    return d >= from && d <= to;
+  });
+  if(dataRows.length === 0){
+    alert('Aucune donnée à exporter sur cette plage de dates.');
+    return;
+  }
+  const data = rowsToExportData(dataRows, true);
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:4},{wch:11},{wch:14},{wch:14},{wch:38},{wch:20},{wch:20},{wch:16},{wch:14},{wch:16},{wch:14},{wch:8},{wch:16},{wch:10},{wch:12},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Comptage');
+  XLSX.writeFile(wb, `Comptage_Inventaire_${from}_a_${to}.xlsx`);
+}
+
 document.getElementById('btnAdd').addEventListener('click', ()=>{
   const entrepot = document.getElementById('inEntrepot').value.trim();
   const emplacement = document.getElementById('inEmplacement').value.trim();
+  const commentaire = document.getElementById('inCommentaire').value.trim();
   const c1raw = document.getElementById('inC1').value;
   const c2raw = document.getElementById('inC2').value;
 
@@ -851,19 +1320,26 @@ document.getElementById('btnAdd').addEventListener('click', ()=>{
   }
 
   const newId = uid();
-  set(ref(db, 'rows/' + newId), {
+  const rowData = {
     date: getSessionDate(),
     entrepot,
     code: selectedArticle.code,
     designation: selectedArticle.designation,
     emplacement,
+    commentaire,
     c1: c1raw === '' ? null : c1raw,
     c2: c2raw === '' ? null : c2raw,
     c3: null,
     auteur: currentUsername || ''
-  });
+  };
+
+  queueRow(newId, rowData);
+  set(ref(db, 'rows/' + newId), rowData)
+    .then(()=> dequeueRow(newId))
+    .catch(()=>{ /* reste en file locale, retentera au retour du réseau */ });
 
   document.getElementById('inEmplacement').value = '';
+  document.getElementById('inCommentaire').value = '';
   document.getElementById('inC1').value = '';
   document.getElementById('inC2').value = '';
   document.getElementById('previewC1').textContent = '';
@@ -884,6 +1360,10 @@ document.getElementById('btnClearSession').addEventListener('click', ()=>{
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
   exportDate(getSessionDate());
+});
+
+document.getElementById('btnExportRange').addEventListener('click', ()=>{
+  exportRange(document.getElementById('rangeFrom').value, document.getElementById('rangeTo').value);
 });
 </script>
 </body>
