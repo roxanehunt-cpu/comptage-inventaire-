@@ -513,7 +513,7 @@
 
 <script type="module">
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, update as fbUpdate, remove as fbRemove, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, set, update as fbUpdate, remove as fbRemove, onValue, get, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -619,29 +619,49 @@ function getSessionDate(){
 }
 
 // Ecoute en temps réel : toute modification (par n'importe quel utilisateur) met à jour l'affichage.
-onValue(rowsRef, (snapshot)=>{
-  const val = snapshot.val() || {};
-  rows = Object.keys(val).map(id => ({ id, ...val[id] }));
-  render();
-});
-
-onValue(masterArticlesRef, (snapshot)=>{
-  const val = snapshot.val() || {};
-  dynamicArticles = Object.values(val);
-  document.getElementById('masterCount').textContent = allArticles().length + ' articles référencés';
-  if(!selectedArticle) renderCombo(inArticle.value);
-});
-
+// Ces écoutes ne démarrent qu'une fois connecté (les règles Firebase exigent une authentification) :
+// les démarrer avant provoquerait un refus définitif que la connexion ultérieure ne relance pas.
 const stockTheoRef = ref(db, 'stockTheorique');
-onValue(stockTheoRef, (snapshot)=>{
-  stockTheo = snapshot.val() || {};
-  const count = Object.keys(stockTheo).length;
-  document.getElementById('stockTheoCount').textContent = count > 0 ? count + ' codes chargés' : '';
-  document.getElementById('stockTheoStatus').textContent = count > 0
-    ? count + ' codes de référence chargés — comparatif actif.'
-    : 'Aucun fichier chargé — le comparatif reste optionnel.';
-  render();
-});
+let dataListenersAttached = false;
+
+function attachDataListeners(){
+  if(dataListenersAttached) return;
+  dataListenersAttached = true;
+
+  onValue(rowsRef, (snapshot)=>{
+    const val = snapshot.val() || {};
+    rows = Object.keys(val).map(id => ({ id, ...val[id] }));
+    render();
+  });
+
+  onValue(masterArticlesRef, (snapshot)=>{
+    const val = snapshot.val() || {};
+    dynamicArticles = Object.values(val);
+    document.getElementById('masterCount').textContent = allArticles().length + ' articles référencés';
+    if(!selectedArticle) renderCombo(inArticle.value);
+  });
+
+  onValue(stockTheoRef, (snapshot)=>{
+    stockTheo = snapshot.val() || {};
+    const count = Object.keys(stockTheo).length;
+    document.getElementById('stockTheoCount').textContent = count > 0 ? count + ' codes chargés' : '';
+    document.getElementById('stockTheoStatus').textContent = count > 0
+      ? count + ' codes de référence chargés — comparatif actif.'
+      : 'Aucun fichier chargé — le comparatif reste optionnel.';
+    render();
+  });
+}
+
+function detachDataListeners(){
+  if(!dataListenersAttached) return;
+  dataListenersAttached = false;
+  off(rowsRef);
+  off(masterArticlesRef);
+  off(stockTheoRef);
+  rows = [];
+  dynamicArticles = [];
+  stockTheo = {};
+}
 
 document.getElementById('sessionDate').value = todayISO();
 
@@ -736,6 +756,7 @@ onAuthStateChanged(auth, async (user)=>{
     document.getElementById('userChip').textContent = 'Connecté : ' + currentUsername;
     authOverlay.style.display = 'none';
     appContent.style.display = 'block';
+    attachDataListeners();
     updateOfflineBanner();
     flushQueue();
 
@@ -751,6 +772,8 @@ onAuthStateChanged(auth, async (user)=>{
     currentUsername = null;
     authOverlay.style.display = 'flex';
     appContent.style.display = 'none';
+    detachDataListeners();
+    render();
   }
 });
 
