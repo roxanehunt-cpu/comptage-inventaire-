@@ -252,6 +252,19 @@
   .ecart-pos{color:var(--danger); font-weight:700;}
   .ecart-neg{color:#8A5A00; font-weight:700;}
   .ecart-zero{color:var(--ok); font-weight:700;}
+
+  .tab-nav{
+    display:flex; gap:4px; margin-bottom:16px; background:#fff; border:1px solid var(--gris-clair);
+    border-radius:12px; padding:4px; overflow-x:auto;
+  }
+  .tab-btn{
+    background:transparent; border:none; padding:10px 16px; font-size:13.5px; font-weight:700;
+    color:var(--gris-fonce); border-radius:8px; cursor:pointer; white-space:nowrap; flex:1;
+  }
+  .tab-btn:hover{color:var(--black);}
+  .tab-btn.active{background:var(--orange); color:#fff;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
 </style>
 </head>
 <body>
@@ -354,6 +367,14 @@
     <div class="stat total"><div class="n" id="statTotal">0</div><div class="l">Quantité totale validée</div></div>
   </div>
 
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="tabComptage">Comptage</button>
+    <button class="tab-btn" data-tab="tabStats">Statistiques</button>
+    <button class="tab-btn" data-tab="tabArchive">Archive</button>
+    <button class="tab-btn" id="tabAdminBtn" data-tab="tabAdmin" style="display:none;">Administration</button>
+  </div>
+
+  <div class="tab-panel active" id="tabComptage">
   <div class="card">
     <h2>Ajouter un comptage <span class="chip" id="masterCount"></span></h2>
     <div class="form-grid">
@@ -415,23 +436,9 @@
     <div id="tableHost"></div>
     <div class="footer-note">Les compteurs acceptent des calculs directs : "3*3*4*6" pour un rangement en piles/rangées, ou "4055+8177+18830" pour additionner plusieurs sous-totaux — le résultat s'affiche automatiquement sous la case. L'article reste sélectionné après l'ajout : renseignez juste un nouvel emplacement et les compteurs pour enchaîner les comptages du même article. Quand Compteur 1 et Compteur 2 diffèrent, une colonne d'arbitrage (Compteur 3) apparaît sur la ligne pour trancher.</div>
   </div>
-
-  <div class="card">
-    <h2>Archive des inventaires</h2>
-    <div class="archive-list" id="archiveList"></div>
-    <div class="range-export">
-      <div class="field">
-        <label>Exporter une plage — du</label>
-        <input type="date" id="rangeFrom">
-      </div>
-      <div class="field">
-        <label>au</label>
-        <input type="date" id="rangeTo">
-      </div>
-      <button class="btn-primary" id="btnExportRange">Exporter la plage</button>
-    </div>
-    <div class="footer-note">Chaque date d'inventaire forme un dossier séparé. Cliquez sur "Charger" pour continuer la saisie d'une date passée, ou "Exporter" pour extraire uniquement les données de cette date. L'export de plage regroupe toutes les dates comprises entre "du" et "au" (inclus) dans un seul fichier.</div>
   </div>
+
+  <div class="tab-panel" id="tabStats">
   <div class="card">
     <h2>Statistiques <span class="chip">de la vue actuelle</span></h2>
     <div class="stats-cols">
@@ -456,8 +463,29 @@
     <div id="stockTheoTable"></div>
     <div class="footer-note">Charge un fichier avec au minimum une colonne "Code Article" (ou "Code") et une colonne "Quantité" (ou "Qté", "Stock"). Il est partagé avec toute l'équipe une fois chargé. La comparaison se fait entre la quantité théorique et le total validé de la vue actuelle, tous entrepôts confondus pour un même code.</div>
   </div>
+  </div>
 
-  <div class="card" id="adminCard" style="display:none;">
+  <div class="tab-panel" id="tabArchive">
+  <div class="card">
+    <h2>Archive des inventaires</h2>
+    <div class="archive-list" id="archiveList"></div>
+    <div class="range-export">
+      <div class="field">
+        <label>Exporter une plage — du</label>
+        <input type="date" id="rangeFrom">
+      </div>
+      <div class="field">
+        <label>au</label>
+        <input type="date" id="rangeTo">
+      </div>
+      <button class="btn-primary" id="btnExportRange">Exporter la plage</button>
+    </div>
+    <div class="footer-note">Chaque date d'inventaire forme un dossier séparé. Cliquez sur "Charger" pour continuer la saisie d'une date passée, ou "Exporter" pour extraire uniquement les données de cette date. L'export de plage regroupe toutes les dates comprises entre "du" et "au" (inclus) dans un seul fichier.</div>
+  </div>
+  </div>
+
+  <div class="tab-panel" id="tabAdmin">
+  <div class="card" id="adminCard">
     <h2>Administration des comptes</h2>
     <div style="padding:16px;">
       <div class="form-grid" style="grid-template-columns: 1fr 1fr auto; padding:0; margin-bottom:16px;">
@@ -477,6 +505,7 @@
       <div id="adminUsersList" style="margin-top:10px;"></div>
     </div>
     <div class="footer-note">Le mot de passe initial n'est visible qu'une seule fois ici, au moment de la création — transmets-le directement à la personne. Firebase ne permet pas de le "revoir" ensuite ; en cas d'oubli, désactive le compte et recrées-en un nouveau avec le même nom. "Désactiver" bloque immédiatement l'accès à l'app sans supprimer l'historique des saisies de la personne.</div>
+  </div>
   </div>
 
 </div>
@@ -613,6 +642,16 @@ onValue(stockTheoRef, (snapshot)=>{
 
 document.getElementById('sessionDate').value = todayISO();
 
+/* ---------- Navigation par onglets ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
+  });
+});
+
 /* ---------- Authentification (nom d'utilisateur + mot de passe) ---------- */
 const authOverlay = document.getElementById('authOverlay');
 const appContent = document.getElementById('appContent');
@@ -699,9 +738,11 @@ onAuthStateChanged(auth, async (user)=>{
 
     if(ADMIN_EMAILS.includes(user.email)){
       document.getElementById('adminCard').style.display = 'block';
+      document.getElementById('tabAdminBtn').style.display = 'block';
       initAdminUsersList();
     } else {
       document.getElementById('adminCard').style.display = 'none';
+      document.getElementById('tabAdminBtn').style.display = 'none';
     }
   } else {
     currentUsername = null;
