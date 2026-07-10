@@ -355,7 +355,7 @@
     </div>
     <div class="session-info" id="sessionInfo"></div>
     <label class="toggle-all">
-      <input type="checkbox" id="toggleAllDates">
+      <input type="checkbox" id="toggleAllDates" checked>
       Voir toutes les dates dans le tableau
     </label>
   </div>
@@ -555,7 +555,7 @@ function allArticles(){
 let rows = [];
 let selectedArticle = null;
 let currentUsername = null;
-let showAllDates = false;
+let showAllDates = true;
 let stockTheo = {};
 
 /* ---------- File d'attente hors-ligne (sécurité en plus du cache interne de Firebase) ---------- */
